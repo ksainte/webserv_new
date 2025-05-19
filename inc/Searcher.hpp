@@ -1,7 +1,18 @@
 #ifndef SEARCHER_HPP
 # define SEARCHER_HPP
+#include <functional>
 #include "../inc/types/ConfigType.hpp"
 #include "../inc/Config.hpp"
+
+struct FindPairEqual: 
+std::unary_function<std::pair<int, int>, bool > {
+	std::pair<int, int> target;
+	FindPairEqual(const std::pair<int, int>& t): target(t) {}
+	bool operator()(const std::pair<int , int>& p) const {
+		return p == target;
+	}
+};
+
 class Searcher
 {
 	private:
@@ -11,11 +22,15 @@ class Searcher
 	static bool 	isServerNameSet(const ConfigType::DirectiveMap& directives,
 											const char* hostname);
 
-	static void		iterateThroughServerBlock(const ConfigType::ServerBlockIt& first,
+	void		iterateThroughServerBlock(const ConfigType::ServerBlockIt& first,
 												const ConfigType::ServerBlockIt& last);
 	
 	const ServerBlock& _getDefaultServer(int sockFd, const char* hostname) const;
 
+	std::list<std::pair<int, int> > _addresses;
+
+	void	_storeAddress(int address, int port);
+	
 	public:
 
 	Searcher(const Config&);

@@ -449,4 +449,6 @@ Tokenizer::Tokenizer(std::string file)
     fileIn.close();
 }
 
-Tokenizer::~Tokenizer(){}
+Tokenizer::~Tokenizer(){
+	_tokens_list.clear();
+}

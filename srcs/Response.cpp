@@ -17,17 +17,18 @@
 Response::Response(){}
 
 
-int Response::send_to_cgi(int sock_file_descriptor, char *path)
+// int Response::send_to_cgi(int sock_file_descriptor, char *path)
+int Response::send_to_cgi(int sock_file_descriptor, const char *path)
 {
   close(1);
   dup2(sock_file_descriptor, 1);
 
-  char *arr[] = {path, NULL};
+  const char *arr[] = {path, NULL};
 
   setenv("QUERY_STRING", path, 1);
   int result;
 
-  result = execv("./cgi-bin/GET.cgi", arr); // pass your script_name
+  result = execv("./cgi-bin/GET.cgi", const_cast<char **>(arr)); // pass your script_name
 
   if (result < 0) 
   {
@@ -92,13 +93,16 @@ std::clog <<"\nValue is "<<  value << "\n\n";
 
   // std::cout << "root directory is " << method_type << "\n";
 
-char arr[root_directory.length() + 1]; 
-memset(arr,0, root_directory.length());
-  for (int x = 0; x < sizeof(arr); x++) { 
-    arr[x] = root_directory[x]; 
-  }
+// char arr[root_directory.length() + 1]; 
+// memset(arr,0, root_directory.length());
+//   for (int x = 0; x < sizeof(arr); x++) { 
+//     arr[x] = root_directory[x]; 
+  // }
 
-  if ((access(arr, F_OK) < 0)) 
+	const std::string filepath = "/home/larfef/Documents/Cursus/C++/exercices/webserv/contents/contact.htm";
+
+  // if ((access(arr, R_OK) < 0)) 
+	if ((access(filepath.c_str(), R_OK) < 0)) 
   {
     std:: cout << "\nERROR (file not found)\n";
 
@@ -112,11 +116,13 @@ memset(arr,0, root_directory.length());
                              "501 Not Implemented";
       send(sock_file_descriptor, send_501_error.c_str(), send_501_error.size(), 0);
   }
-  else {
+  else 
+	{
     if ((method_type.compare("GET") == 0))
     {
       std::cout << "\nReceived GET method\n";
-      send_to_cgi(sock_file_descriptor, arr);
+      // send_to_cgi(sock_file_descriptor, arr);
+			send_to_cgi(sock_file_descriptor, filepath.c_str());
     }
   }
 
