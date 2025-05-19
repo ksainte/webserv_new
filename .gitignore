@@ -1,0 +1,12 @@
+*
+!inc/
+!inc/**
+!srcs/
+!srcs/**
+!Makefile
+!README.md
+!configFile/
+!configFile/**
+!contents/
+!contents/**
+!.gitignore
