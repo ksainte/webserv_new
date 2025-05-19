@@ -11,7 +11,7 @@ class ConnectionManager:public EventManager
 	public:
 
 	ConnectionManager();
-	// ~ConnectionManager();
+	~ConnectionManager();
 
 	int	initNewConnection(int clientFd, int sockFd);
 	// int handleEvent(const Event* p, int flags);

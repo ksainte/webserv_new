@@ -41,37 +41,10 @@ int	Request::read(int fd)
 	return (0);
 }
 
-void Request::set_headers(void)
+std::map<std::string, std::string> &Request::set_headers(void)
 {
   std::string index_filename = "/index.html";
 
-//   std::cout << _buff;
-
-// char arr[str.length() + 1]; 
-// memset(arr,0, str.length());
-//   for (int x = 0; x < sizeof(arr); x++) { 
-//     arr[x] = str[x]; 
-//   }
-//   std::cout << "aaaarrr " << arr;
-//   char *get_first_line      = strtok(arr, "\n");
-//   char *get_words_from_line = strtok(get_first_line, " ");
-
-//   for (int i = 0; i < 2; i++) 
-//   {
-//     if (i == 0) 
-//     {
-//       _method_type = get_words_from_line;
-//     }
-//     else 
-//     { 
-//       _filename = (strcmp(get_words_from_line, "/") == 0) ? index_filename
-//                                                          : get_words_from_line;
-//     }
-//     get_words_from_line = strtok(NULL, " "); // sets pointer to next "word"
-//   }
-
-//   std::cout << "aa " << _filename << "\n";
-//   std::cout << "bb " << _method_type << "\n";
 
 	std::istringstream stream(str);
 	std::string line;
@@ -86,15 +59,39 @@ void Request::set_headers(void)
 		//Add request line parsing logic here
 		
 		_path = (_path.compare("/") == 0) ? index_filename : _path;
-		std::cout << _method << "\n";
-		std::cout << _path << "\n";
-		std::cout << _version << "\n";
-
+		// std::cout << _method << "\n";
+		// std::cout << _path << "\n";
+		// std::cout << _version << "\n";
 	}
+	while (std::getline(stream, line) && line != "\r") 
+	{
+		// std::cout << "\ncurrent line is "<< line << "\n";
+		size_t pos = line.find(":");
+		if (pos != std::string::npos) {
+			std::string key = line.substr(0, pos);
+			std::string value = line.substr(pos + 1);
 
+			// Trim whitespace
+			// Shoudl also trim whitespaces before key and after value
+			key.erase(key.find_last_not_of(" ") + 1);
+			value.erase(0, value.find_first_not_of(" "));
+			value.erase(value.find_last_not_of("\r") + 1);
 
+			// Convert key to lowercase for case-insensitive comparison
+			for (size_t i = 0; i < key.size(); ++i) 
+			{
+				key[i] = std::tolower(key[i]);
+			}
+			key_value_headers.insert(std::pair<std::string, std::string>(key, value));
+			// std::cout << key << "\n";
+			// std::cout << value << "\n";
+			// std::cout << "-----------------------------------------";
+
+		}
+	}
+	std::cout << "Map size: " << key_value_headers.size() << std::endl;
+	return (key_value_headers);
 }
-
 // void Request::set_headers(void)
 // {
 // 	std::istringstream stream(_buff);

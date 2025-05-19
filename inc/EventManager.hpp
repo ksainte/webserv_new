@@ -8,7 +8,7 @@ class EventManager : public Event
 	public:
 
 	EventManager();
-	// ~EventManager();
+	~EventManager();
 
 	int	registerEvent(int eventFlags, Event* ptr) const;
 	int	modifyEvent(int eventFlags, Event* ptr) const;

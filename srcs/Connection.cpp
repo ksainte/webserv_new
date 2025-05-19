@@ -24,8 +24,10 @@ int Connection::handleEvent(const Event* p, int flags)
   }
 	else if (flags & EPOLLOUT) 
   {
+    std::map<std::string, std::string> mapName;
+
       std::cout << "current buff is: \n"<<  str;
-      set_headers();
+      mapName = set_headers();
       int pid = fork();
 
       if (pid == 0) 
