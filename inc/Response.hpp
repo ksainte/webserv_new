@@ -10,7 +10,8 @@ class Response {
 	// Response(const Response& other);
 	// Response& operator=(const Response& other);
     int send_response(int sock_file_descriptor, std::string filename, std::string method_type);
-    int send_to_cgi(int sock_file_descriptor, char *path);
+    // int send_to_cgi(int sock_file_descriptor, char *path);
+		int send_to_cgi(int sock_file_descriptor, const char *path);
 	// ~Response();
 
 	// const std::ifstream& getifs() const;

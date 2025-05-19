@@ -46,9 +46,6 @@
 // 	return 0;
 // }
 
-ConnectionManager ConMan;
-Connection(ConMan);
-
 
 int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 {

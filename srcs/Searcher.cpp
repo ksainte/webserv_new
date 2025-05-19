@@ -120,5 +120,26 @@ const ConfigType::DirectiveValue* Searcher::findServerDirective(int sockFd,
 	return &(it->second);
 }
 
-Searcher::Searcher(const Config& config) : _config(config) 
-{LOG_DEBUG << "Searcher created";}
+void		Searcher::iterateThroughServerBlock(
+	const ConfigType::ServerBlockIt& first,
+	const ConfigType::ServerBlockIt& last) {
+		for (ConfigType::ServerBlockIt it = first; it != last; ++it) {
+			if (std::find_if(_addresses.begin(), _addresses.end(), 
+				FindPairEqual(std::make_pair((*it).getIp(), (*it).getPort()))) == _addresses.end()) {
+				_storeAddress((*it).getIp(), (*it).getPort());
+			}
+		}
+	}
+
+void Searcher::_storeAddress(int address, int port) {
+	_addresses.push_back(std::make_pair(address, port));
+}
+
+Searcher::Searcher(const Config& config) : _config(config)
+{
+	iterateThroughServerBlock(config.getServerBlocks().begin(),
+	 config.getServerBlocks().end());
+
+	
+	LOG_DEBUG << "Searcher created";
+}

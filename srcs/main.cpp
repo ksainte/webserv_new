@@ -31,9 +31,6 @@ int main() {
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
 		
-		// EventManager eventManager;
-		// ConnectionManager connManager(eventManager);
-			
 		// Quick test to init socket with Listener
 		std::list<IpPort> ipPortList;
 		ipPortList.push_back(IpPort("127.0.0.2", 8080));
