@@ -36,6 +36,10 @@ bool	ServerBlock::setIpPort(const std::string& ipPort)
 
 	size_t pos = ipPort.find(":");
 
+	// early return because incomplete ip address completion using default ip:port
+	// value is not currently implemented
+	if (pos == std::string::npos) return false;
+
 	bool success = ipV4ToNl(ipPort.substr(0, pos), _ip);
 
 	if (success && pos == std::string::npos)
