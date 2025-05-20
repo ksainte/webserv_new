@@ -14,12 +14,14 @@ typedef struct IpPort
 		: ip(ip), port(port) {};
 } IpPort;
 
+class Searcher;
+
 class Listener: public virtual IEventHandler, public ConnectionManager
 {
 
 	public:
 
-	Listener(const std::list<IpPort>& ipPortList);
+	Listener(const std::list<IpPort>& ipPortList, Searcher &searcher);
 	void run();
 	// ~Listener();
 

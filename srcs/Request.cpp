@@ -43,7 +43,7 @@ int	Request::read(int fd)
 
 std::map<std::string, std::string> &Request::set_headers(void)
 {
-  std::string index_filename = "/index.html";
+  	std::string index_filename = "/index.html";
 
 
 	std::istringstream stream(str);
@@ -51,17 +51,12 @@ std::map<std::string, std::string> &Request::set_headers(void)
 
 	std::cout << "REQUEST set headers\n";
 
-	// Parse request line
 	if (std::getline(stream, line)) 
 	{
 		std::istringstream lineStream(line);//how does it know to omit /?
 		lineStream >> _method >> _path >> _version;
-		//Add request line parsing logic here
 		
 		_path = (_path.compare("/") == 0) ? index_filename : _path;
-		// std::cout << _method << "\n";
-		// std::cout << _path << "\n";
-		// std::cout << _version << "\n";
 	}
 	while (std::getline(stream, line) && line != "\r") 
 	{
@@ -83,66 +78,17 @@ std::map<std::string, std::string> &Request::set_headers(void)
 				key[i] = std::tolower(key[i]);
 			}
 			key_value_headers.insert(std::pair<std::string, std::string>(key, value));
-			// std::cout << key << "\n";
-			// std::cout << value << "\n";
-			// std::cout << "-----------------------------------------";
 
 		}
 	}
 	std::cout << "Map size: " << key_value_headers.size() << std::endl;
 	return (key_value_headers);
 }
-// void Request::set_headers(void)
-// {
-// 	std::istringstream stream(_buff);
-// 	std::string line;
 
-// 	std::cout << "REQUEST set headers\n";
-
-// 	// Parse request line
-// 	if (std::getline(stream, line)) 
-// 	{
-// 		std::istringstream lineStream(line);//how does it know to omit /?
-// 		lineStream >> method >> path >> version;
-// 		//Add request line parsing logic here
-		
-// 		std::cout << method << "\n";
-// 		std::cout << path << "\n";
-// 		std::cout << version << "\n";
-// 		std::cout << "End of first line\n";
-// 	}
-// 	// Parse headers
-// 	while (std::getline(stream, line) && line != "\r") 
-// 	{
-// 		std::cout << "current line is "<< line << "\n";
-// 		size_t pos = line.find(":");
-// 		if (pos != std::string::npos) {
-// 			std::string key = line.substr(0, pos);
-// 			std::string value = line.substr(pos + 1);
-
-// 			// Trim whitespace
-// 			// Shoudl also trim whitespaces before key and after value
-// 			key.erase(key.find_last_not_of(" ") + 1);
-// 			value.erase(0, value.find_first_not_of(" "));
-// 			value.erase(value.find_last_not_of("\r") + 1);
-
-// 			// Convert key to lowercase for case-insensitive comparison
-// 			for (size_t i = 0; i < key.size(); ++i) {
-// 				key[i] = std::tolower(key[i]);
-// 			}
-
-// 			// Store header
-// 			headers.insert(key, value);//HashTable headers;
-// 		}
-// 	}
-// 	std::cout << "HEADERS WORK END\n";
-// 	state &= ~HEADERS_END;
-// 	state |= HEADERS_SET;
-// }
 
 Request::Request()
 {
-  _offset = 0;
+    _offset = 0;
 	memset(_buff, 0 , BUFFSIZE);
 	LOG_DEBUG << "Request created";
 }

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
+#include "../inc/Searcher.hpp"
 
 
 
@@ -35,13 +36,36 @@ int Response::send_to_cgi(int sock_file_descriptor, char *path)
   return 0;
 }
 
-int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type)
+int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type, Searcher &_searcher, std::map<std::string, std::string> &key_value_headers)
 {
-
-  std::string root_directory = "./contents";
-
   std::cout << "filename is " << filename << "\n";
   std::cout << "method is " << method_type << "\n";
+
+  std::string root_directory;
+	const ConfigType::DirectiveValue* p;
+
+// filename /contents/contact.html
+
+  const char *test = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents
+  std::cout << " test is ------------------"<< test << "\n";
+  p = _searcher.findLocationDirective(4, "root", "2", test);
+  if (p)
+  {
+    std::cout << "\nvalue:\n";
+    for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
+    {
+        std::cout << *it << "\n";//checker si c est directory ou file
+        root_directory = *it;
+        //si directory, append uri, donc / et contact.html
+    }
+  }
+  std::string sub = filename.substr(strlen(test), filename.length() - strlen(test));
+  // std::cout << strlen(test) << "\n";
+  std::cout << sub << "\n";
+
+  //recuperer l uri!
+// exit(1);
+
 
   if ((filename.compare("/index.html") == 0)) 
   {
@@ -49,8 +73,7 @@ int Response::send_response(int sock_file_descriptor, std::string filename, std:
   }
   else 
   {
-    root_directory = "./contents";
-    root_directory.append(filename);
+    root_directory.append(sub);
   }
 
 

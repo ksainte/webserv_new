@@ -24,15 +24,20 @@ int Connection::handleEvent(const Event* p, int flags)
   }
 	else if (flags & EPOLLOUT) 
   {
-    std::map<std::string, std::string> mapName;
+    std::map<std::string, std::string> key_value_headers;//array de pointeur, tu accedes a it qui est un pointeur
 
       std::cout << "current buff is: \n"<<  str;
-      mapName = set_headers();
+      key_value_headers = set_headers();
+      
+      // for(std::map<std::string, std::string>::const_iterator it = mapName.begin(); it != mapName.end(); ++it)
+      // {
+      //   std::cout << it->first << " " << it->second <<  "\n";
+      // }
       int pid = fork();
 
       if (pid == 0) 
       {
-        send_response(p->getFd(), getFilename(), getMethod());
+        send_response(p->getFd(), getFilename(), getMethod(), _manager->_searcher, key_value_headers);
         exit(0);
       }
 			_manager->unregisterEvent(p->getFd());
@@ -45,58 +50,9 @@ void Connection::fillConnection(int clientFd, int sockFd)
 {
   _clientFd = clientFd;
   _sockFd = sockFd;
-  // LOG_DEBUG << "Connection Filled\n";
 }
 
 void Connection::setManager(ConnectionManager* manager) {
   _manager = manager;
 }
-
-//http://127.0.0.2:8080/contact.htm
-
-//        /contact.htm                                              /contents/contact.htm          /contents/contact.htm -> route = /contents/, uri = contact.htm
-
-//call function avec /contact.htm ->     location /contact {
-
-//route /contact ou si pas il return null
-
-//retirer de l url la route -> .htm = uri, la difference entre !
-
-
-//route c est la location!
-
-//racine c est dir root!
-
-//->pour cette location
-
-//        root /contents; ou NULL si pas setup
-
-// root est fichier ou dossier?
-
-// /contents est un dossier!
-
-// si dossier, append uri et essayer acceder au fichier, /contents + / + .htm = /contents/.htm -> pas access
-
-// si il trouve en root ->/Apps/19/webserv/contents
-
-// /Apps/19/webserv + / + uri = /Apps/19/webserv/contents/contact.htm
-
-// si fichier, tester si permission et existe->return direct le fichier! pas cense en etre un!
-
-///Apps/19/webserv/contents/contact.htm
-
-///Apps/19/webserv/contents/contact.htm si pas accessible!
-
-//si tu tombes sur un dossier!
-
-// si pas fichier-> index existe?
-
-// si index existe, append a la route!
-
-// si existe pas? depend d une autre directive= autoindex
-
-// autoindex = true->lister repertoire
-
-
-
 

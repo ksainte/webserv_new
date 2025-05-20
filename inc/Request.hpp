@@ -15,11 +15,9 @@ class Request
 	// Request(const Request& other);
 	// Request& operator=(const Request& other);
 
-	const char*								getBuff() const;
 	std::string								getMethod() const;
  	std::string								getFilename() const;
-	// int										getBuffSize() const;
-	// const std::vector<char>&				getRawBytes() const;
+
 
 	int	read(int fd);
 	std::map<std::string, std::string>  &set_headers(void);

@@ -19,7 +19,7 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 	return (0);
 }
 
-ConnectionManager::ConnectionManager() : EventManager(),_connIndex(0)
+ConnectionManager::ConnectionManager(Searcher &searcher) : _searcher(searcher), EventManager(),_connIndex(0)
 {
 	LOG_DEBUG << "Connection Manager created\n";
 }
