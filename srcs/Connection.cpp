@@ -26,12 +26,12 @@ int Connection::handleEvent(const Event* p, int flags)
   {
     std::map<std::string, std::string> key_value_headers;//array de pointeur, tu accedes a it qui est un pointeur
 
-      std::cout << "current buff is: \n"<<  str;
+      // std::cout << "current buff is: \n"<<  str;
       key_value_headers = set_headers();
       
-      // for(std::map<std::string, std::string>::const_iterator it = mapName.begin(); it != mapName.end(); ++it)
+      // for(std::map<std::string, std::string>::const_iterator it = key_value_headers.begin(); it != key_value_headers.end(); ++it)
       // {
-      //   std::cout << it->first << " " << it->second <<  "\n";
+      //   std::cout << it->first << ":" << it->second <<  "\n";
       // }
       int pid = fork();
 

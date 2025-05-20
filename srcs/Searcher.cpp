@@ -71,7 +71,7 @@ const char* Searcher::getLocationPrefix(int sockFd, const char* host, const char
 	const LocationBlock* locationBlock = serverBlock.search(url);
 	if (!locationBlock) 
 	{
-		std::cout << "aaa";
+		std::cout << "getLocationPrefix returns null!";
 		return NULL;
 	}
 	return locationBlock->getPrefix().c_str();

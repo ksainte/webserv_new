@@ -42,16 +42,27 @@ int Response::send_response(int sock_file_descriptor, std::string filename, std:
   std::cout << "method is " << method_type << "\n";
 
   std::string root_directory;
+  std::string value;
 	const ConfigType::DirectiveValue* p;
 
 // filename /contents/contact.html
+for(std::map<std::string, std::string>::const_iterator it = key_value_headers.begin(); it != key_value_headers.end(); ++it)
+{
+  if (it->first == "host")
+    value = it->second;
+}
 
-  const char *test = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents
-  std::cout << " test is ------------------"<< test << "\n";
-  p = _searcher.findLocationDirective(4, "root", "2", test);
+std::clog <<"\nValue is "<<  value << "\n";
+  const char *test = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents 
+  // if (!test)
+  // {
+  //   return 0;
+  // }
+  std::clog << " test is ------------------"<< test << "\n";
+  p = _searcher.findLocationDirective(sock_file_descriptor, "root", "2", test);
   if (p)
   {
-    std::cout << "\nvalue:\n";
+    std::clog << "\nvalue:\n";
     for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
     {
         std::cout << *it << "\n";//checker si c est directory ou file
@@ -59,9 +70,11 @@ int Response::send_response(int sock_file_descriptor, std::string filename, std:
         //si directory, append uri, donc / et contact.html
     }
   }
+  if (!p)
+    return 0;
   std::string sub = filename.substr(strlen(test), filename.length() - strlen(test));
   // std::cout << strlen(test) << "\n";
-  std::cout << sub << "\n";
+  std::clog << sub << "\n";
 
   //recuperer l uri!
 // exit(1);
