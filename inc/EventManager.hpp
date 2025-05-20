@@ -3,7 +3,8 @@
 #include "Event.hpp"
 #include <stdint.h>
 #include <sys/epoll.h>
-class EventManager : public Event
+
+class EventManager
 {
 	public:
 

@@ -4,7 +4,6 @@
 #include "EventManager.hpp"
 #include <map>
 
-// class Connection;
 
 class ConnectionManager:public EventManager
 {

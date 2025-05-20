@@ -1,5 +1,5 @@
 #include "../inc/Connection.hpp"
-#include "../inc/ConnectionManager.hpp"  // <-- This is required!
+#include "../inc/ConnectionManager.hpp"
 #include "../inc/Event.hpp"
 #include "../inc/EventManager.hpp"
 #include "../inc/Event.hpp"
