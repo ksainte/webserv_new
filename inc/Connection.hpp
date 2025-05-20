@@ -3,7 +3,8 @@
 #include "IEventHandler.hpp"
 #include "../inc/Request.hpp"
 #include "../inc/Response.hpp"
-// #include "ConnectionManager.hpp"  // <-- add this line!
+// #include "../inc/ConnectionManager.hpp"  // <-- This is required!
+
 
 class ConnectionManager;
 

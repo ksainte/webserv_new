@@ -3,12 +3,13 @@
 #include "Event.hpp"
 #include <stdint.h>
 #include <sys/epoll.h>
-class EventManager : public Event
+
+class EventManager
 {
 	public:
 
 	EventManager();
-	// ~EventManager();
+	~EventManager();
 
 	int	registerEvent(int eventFlags, Event* ptr) const;
 	int	modifyEvent(int eventFlags, Event* ptr) const;

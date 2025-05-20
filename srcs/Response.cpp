@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
+#include "../inc/Searcher.hpp"
 
 
 
@@ -36,23 +37,58 @@ int Response::send_to_cgi(int sock_file_descriptor, const char *path)
   return 0;
 }
 
-int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type)
+int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type, const Searcher &_searcher, std::map<std::string, std::string> &key_value_headers)
 {
+  std::cout << "filename is " << filename << "\n";
+  std::cout << "method is " << method_type << "\n";
 
-  // std::string root_directory = "./contents";
+  std::string root_directory;
+  std::string value;
+	const ConfigType::DirectiveValue* p;
 
-  // std::cout << "filename is " << filename << "\n";
-  // std::cout << "method is " << method_type << "\n";
+// filename /contents/contact.html
+for(std::map<std::string, std::string>::const_iterator it = key_value_headers.begin(); it != key_value_headers.end(); ++it)
+{
+  if (it->first == "host")
+    value = it->second;
+}
 
-  // if ((filename.compare("/index.html") == 0)) 
+std::clog <<"\nValue is "<<  value << "\n\n";
+  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents 
+  // if (!test)
   // {
-  //   root_directory = "./index.html";
+  //   return 0;
   // }
-  // else 
-  // {
-  //   root_directory = "./contents";
-  //   root_directory.append(filename);
-  // }
+  std::clog << " test is ------------------"<< route << "\n";
+  p = _searcher.findLocationDirective(sock_file_descriptor, "root", "2", route);
+  if (p)
+  {
+    std::clog << "\nroot_directory is:\n";
+    for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
+    {
+        std::cout << *it << "\n";//checker si c est directory ou file
+        root_directory = *it;
+        //si directory, append uri, donc / et contact.html
+    }
+  }
+  if (!p)
+    return 0;
+  std::string sub = filename.substr(strlen(route), filename.length() - strlen(route));
+  // std::cout << strlen(test) << "\n";
+  std::clog << sub << "\n";
+
+  //recuperer l uri!
+// exit(1);
+
+
+  if ((filename.compare("/index.html") == 0)) 
+  {
+    root_directory = "./index.html";
+  }
+  else 
+  {
+    root_directory.append(sub);
+  }
 
 
   // std::cout << "root directory is " << method_type << "\n";

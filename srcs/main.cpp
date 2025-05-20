@@ -1,9 +1,7 @@
 #include "../inc/Config.hpp"
 #include "../inc/Tokenizer.hpp"
-#include "../inc/RandomTokenList.hpp"
 #include "../inc/Listener.hpp"
 #include "../inc/Searcher.hpp"
-#include "../inc/EventManager.hpp"
 #include "../inc/ConnectionManager.hpp"
 #include "../inc/utils.hpp"
 #include <csignal>
@@ -31,7 +29,7 @@ int main() {
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
 
-		Listener listener(searcher.getAddresses());
+		Listener listener(searcher.getAddresses(), searcher);
 
 		char* configFileName = std::getenv("WEBSERV_CONF_FILE");
 		if (configFileName)

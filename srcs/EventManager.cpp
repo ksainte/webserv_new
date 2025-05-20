@@ -10,25 +10,6 @@
 #include <cstdlib>
 #include <unistd.h>
 
-// void	EventManager::run()
-// {
-// 	while (getSigIntFlag() == false)
-// 	{
-// 		int numEvent = epoll_wait(_epfd, _events, MAX_EVENTS, 0);
-	
-// 		if (numEvent == -1)
-// 		{
-// 			LOG_CRITICAL << ErrorMessages::E_EPOLL_WAIT << ": " << strerror(errno);
-// 			throw std::runtime_error(ErrorMessages::E_EPOLL_WAIT);
-// 		}
-	
-// 		for (int i = 0; i < numEvent; ++i)
-// 		{
-// 			Event* event = static_cast<Event *>(_events[i].data.ptr);	
-// 			event->getHandler()->handleEvent(event, _events[i].events);
-// 		}
-// 	}
-// }
 
 int	EventManager::registerEvent(int eventFlags, Event* ptr) const
 {
@@ -92,8 +73,8 @@ void EventManager::addTcpEvent(int fd, IEventHandler* handler)//a changer les fl
 	_eventIndex++;
 }
 
-// EventManager::~EventManager()
-// {
-// 	close(_epfd);
-// 	LOG_DEBUG << "EventManager destroyed\n";
-// }
+EventManager::~EventManager()
+{
+	close(_epfd);
+	LOG_DEBUG << "EventManager destroyed\n";
+}

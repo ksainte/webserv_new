@@ -69,7 +69,11 @@ const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname)
 const char* Searcher::getLocationPrefix(int sockFd, const char* host, const char* url) const {
 	const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
 	const LocationBlock* locationBlock = serverBlock.search(url);
-	if (!locationBlock) return NULL;
+	if (!locationBlock) 
+	{
+		std::cout << "getLocationPrefix returns null!";
+		return NULL;
+	}
 	return locationBlock->getPrefix().c_str();
 }
 

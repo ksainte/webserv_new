@@ -11,6 +11,7 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 
+
 int	Listener::handleEvent(const Event* event, int flags) 
 {
 	LOG_INFO << "New connection request\n";
@@ -58,7 +59,7 @@ void	Listener::run()
 }
 
 
-Listener::Listener(const std::list<std::pair<int, int> >& ipPortList): ConnectionManager()
+Listener::Listener(const std::list<std::pair<int, int> >& ipPortList, const Searcher& searcher): ConnectionManager(searcher)
 {
 
 	if (iterateThroughIpPortList(ipPortList) == -1)
