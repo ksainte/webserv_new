@@ -7,6 +7,7 @@ class ErrorMessages {
 		static const char* SERVER_NAME_NOT_FOUND;
 		static const char* E_SOCK_INIT;
 		static const char* E_BAD_ARG;
+		static const char* E_BAD_IP;
 		static const char* E_BAD_TYPE;
 		static const char* E_BAD_ROUTE;
 		static const char* E_EPOLL_INIT;

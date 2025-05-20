@@ -67,7 +67,11 @@ class AConfig : public ConfigType
 				{
 					IteratorType tmp = it;
 					std::advance(tmp, 1);
-					_serverBlocks[_serverBlocks.size() - 1].setIpPort((*tmp).value);
+					if (!(_serverBlocks[_serverBlocks.size() - 1].setIpPort((*tmp).value)))
+					{
+						LOG_CRITICAL << ErrorMessages::E_BAD_IP << " " << (*tmp).value;
+						throw std::runtime_error(ErrorMessages::E_BAD_IP);
+					}
 				}
 				break;
 				

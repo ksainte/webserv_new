@@ -1,8 +1,6 @@
 #include "../inc/utils.hpp"
-#include "../inc/constants/ErrorMessages.hpp"
 #include <algorithm>
 #include <arpa/inet.h>
-#include <cstring>
 #include <sstream>
 
 /**
@@ -12,7 +10,7 @@
  * @return unsigned long 
  */
 
-unsigned long ipV4ToNl(std::string ipV4dotNotation)
+bool ipV4ToNl(std::string ipV4dotNotation, unsigned int& dst)
 {
 	unsigned long byte1, byte2, byte3, byte4;
 
@@ -27,14 +25,19 @@ unsigned long ipV4ToNl(std::string ipV4dotNotation)
 		|| byte1 > 255 
 		|| byte2 > 255
 		|| byte3 > 255 
-		|| byte4 > 255 
+		|| byte4 > 255
 		|| ss >> remaining)
-		throw std::invalid_argument(ErrorMessages::E_BAD_ARG);
+		return false;
+		// throw std::invalid_argument(ErrorMessages::E_BAD_ARG);
 
-	unsigned long host_bytes = 0;
-	host_bytes = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
+	// unsigned long host_bytes = 0;
+	dst = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
+	dst = htonl(dst);
+	// host_bytes = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
 
-	return htonl(host_bytes);
+
+	// return htonl(host_bytes);
+	return true;
 }
 
 bool&	getSigIntFlag() {

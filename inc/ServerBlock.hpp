@@ -3,6 +3,7 @@
 #include "Trie.hpp"
 #include "ADirective.hpp"
 #include <stdint.h>
+#include "../inc/utils.hpp"
 /**
  * @brief (C++98) Represents a server configuration block, managing directives and nested blocks.
  * @details Inherits directive handling from ADirective and a searchable structure
@@ -19,7 +20,7 @@ class ServerBlock: public Trie, public ADirective {
 	~ServerBlock();
 	std::string toJson(int indentLevel) const;
 
-	void	setIpPort(const std::string& ipPort);
+	bool	setIpPort(const std::string& ipPort);
 
 	uint32_t	getIp() const;
 	uint32_t	getPort() const;

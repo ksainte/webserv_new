@@ -21,7 +21,7 @@ class Listener: public virtual IEventHandler, public ConnectionManager
 
 	public:
 
-	Listener(const std::list<IpPort>& ipPortList, Searcher &searcher);
+	Listener(const std::list<std::pair<int, int> >& addresses);
 	void run();
 	// ~Listener();
 
@@ -31,8 +31,8 @@ class Listener: public virtual IEventHandler, public ConnectionManager
 	std::list<int> sockfds;
 	// std::map<int, Event *> _eventMap;
 
-	int	initSockFd(const IpPort& ipPort) const;
-	int	iterateThroughIpPortList(const std::list<IpPort>& ipPortList);
+	int	initSockFd(const std::pair<int, int>& address) const;
+	int	iterateThroughIpPortList(const std::list<std::pair<int, int> >& addresses);
 
 	int	handleEvent(const Event* event, int flags);
 	int	handleError();

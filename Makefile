@@ -1,4 +1,3 @@
-
 NAME     := webserv
 BIN      := bin
 INCLUDE  := includes
