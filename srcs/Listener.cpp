@@ -51,7 +51,7 @@ void	Listener::run()
 	
 		for (int i = 0; i < numEvent; ++i)
 		{
-			Event* event = static_cast<Event *>(_events[i].data.ptr);//ou ptr est soit celui de LISTENER soit celui de CONNECTION!
+			Event* event = static_cast<Event *>(_events[i].data.ptr);
 			event->getHandler()->handleEvent(event, _events[i].events);
 		}
 	}
@@ -115,7 +115,8 @@ int Listener::initSockFd(const std::pair<int, int>& address) const
 	}
 
 	// 6. Return the socket fd
-	LOG_INFO << SuccessMessages::SOCK_INIT;
+	LOG_INFO << SuccessMessages::SOCK_INIT << " " << nlToipv4(address.first) 
+	<< ":" << address.second;
 	return sockfd;
 }
 

@@ -40,6 +40,26 @@ bool ipV4ToNl(std::string ipV4dotNotation, unsigned int& dst)
 	return true;
 }
 
+std::string	nlToipv4(unsigned int netLong) {
+	unsigned int hostLong = ntohl(netLong);
+	std::ostringstream oss;
+	if (!oss) return "";
+
+	unsigned int mask = 0;
+	for (int start = 24, end = 31; end >= 7; start -= 8, end -= 8) {
+	
+		for (int i = start; i <= end; ++i) {
+			mask = mask | (1 << i);
+		}
+			unsigned int bits = (hostLong & mask) >> start;
+			oss << bits;
+			if (end > 7)
+				oss << ".";
+		mask = 0;
+	}
+	return oss.str();
+}
+
 bool&	getSigIntFlag() {
 	static bool sigIntFlag = false;
 	return sigIntFlag;

@@ -28,7 +28,7 @@ int Connection::handleEvent(const Event* p, int flags)
       set_headers();
       int pid = fork();
 
-      if (pid == 0) 
+      if (pid == 0)
       {
         send_response(p->getFd(), getFilename(), getMethod());
         exit(0);
