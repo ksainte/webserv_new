@@ -35,7 +35,7 @@ int Connection::handleEvent(const Event* p, int flags)
       // }
       int pid = fork();
 
-      if (pid == 0) 
+      if (pid == 0)
       {
         send_response(p->getFd(), getFilename(), getMethod(), _manager->_searcher, key_value_headers);
         exit(0);
