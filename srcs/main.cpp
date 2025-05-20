@@ -1,9 +1,7 @@
 #include "../inc/Config.hpp"
 #include "../inc/Tokenizer.hpp"
-#include "../inc/RandomTokenList.hpp"
 #include "../inc/Listener.hpp"
 #include "../inc/Searcher.hpp"
-#include "../inc/EventManager.hpp"
 #include "../inc/ConnectionManager.hpp"
 #include "../inc/utils.hpp"
 #include <csignal>
@@ -31,7 +29,7 @@ int main() {
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
 
-		Listener listener(searcher.getAddresses());
+		Listener listener(searcher.getAddresses(), searcher);
 
 		char* configFileName = std::getenv("WEBSERV_CONF_FILE");
 		if (configFileName)
@@ -40,19 +38,7 @@ int main() {
 			os << config.toJson(0) << std::endl;
 			os.close();
 		}
-		// const ConfigType::DirectiveValue* p;
-		const char *test = searcher.getLocationPrefix(4, "2", "/contents.htm");
-				// p = searcher.findLocationDirective(4, "root", "2", test);
-		// printf("%s\n", test);
-		std::cout << " test is ------------------"<< test << "\n";
-		// if (p)
-		// {
-		// 	std::cout << "value :";
-		// 	for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
-		// 	{
-		// 			std::cout << *it << " ";
-		// 		}
-		// 	}
+		
 		listener.run();
 	}
 	catch (std::exception& e) {

@@ -37,7 +37,7 @@ int Response::send_to_cgi(int sock_file_descriptor, const char *path)
   return 0;
 }
 
-int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type, Searcher &_searcher, std::map<std::string, std::string> &key_value_headers)
+int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type, const Searcher &_searcher, std::map<std::string, std::string> &key_value_headers)
 {
   std::cout << "filename is " << filename << "\n";
   std::cout << "method is " << method_type << "\n";

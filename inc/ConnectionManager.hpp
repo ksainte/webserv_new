@@ -2,7 +2,6 @@
 #define CONNECTIONMANAGER_HPP
 #include "Connection.hpp"
 #include "EventManager.hpp"
-#include <map>
 
 class Searcher;
 
@@ -10,7 +9,7 @@ class ConnectionManager:public EventManager
 {
 	public:
 
-	ConnectionManager(Searcher &searcher);
+	ConnectionManager(const Searcher &searcher);
 	~ConnectionManager();
 
 	int	initNewConnection(int clientFd, int sockFd);
@@ -21,8 +20,8 @@ class ConnectionManager:public EventManager
 	
 	public:
 	
+	const Searcher &_searcher;
 	int _connIndex;
-	Searcher &_searcher;
 	Connection connection[5];
 	static const int MAX_CONN = 1000;
 

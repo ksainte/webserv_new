@@ -59,7 +59,7 @@ void	Listener::run()
 }
 
 
-Listener::Listener(const std::list<std::pair<int, int> >& ipPortList): ConnectionManager()
+Listener::Listener(const std::list<std::pair<int, int> >& ipPortList, const Searcher& searcher): ConnectionManager(searcher)
 {
 
 	if (iterateThroughIpPortList(ipPortList) == -1)

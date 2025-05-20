@@ -17,7 +17,7 @@ Connection::Connection(): Request(), Response(), _sockFd(-1), _clientFd(-1), _ma
 
 int Connection::handleEvent(const Event* p, int flags) 
 {
-  
+
 	if ((flags & EPOLLIN) && read(p->getFd()) == 0)
   {
 		_manager->modifyEvent(uint32_t(EPOLLOUT), const_cast<Event*>(p));
