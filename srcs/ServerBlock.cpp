@@ -12,7 +12,7 @@ ServerBlock& ServerBlock::operator=(const ServerBlock& other) {
 	
 	if (this == &other)
 		return *this;
-	
+
 	Trie::operator=(other);
 	ADirective::operator=(other);
 
@@ -22,24 +22,71 @@ ServerBlock& ServerBlock::operator=(const ServerBlock& other) {
 	return *this;
 }
 
-ServerBlock::ServerBlock(): Trie(), ADirective()
+ServerBlock::ServerBlock(): Trie(), ADirective(), _ip(0), _port(0)
 {LOG_DEBUG << "ServerBlock created";}
 
 ServerBlock::~ServerBlock() {
 	LOG_DEBUG << "ServerBlock destroyed";
 }
 
-void	ServerBlock::setIpPort(const std::string& ipPort)
+bool	ServerBlock::setIpPort(const std::string& ipPort)
 {
-	std::string ip = ipPort.substr(0,ipPort.find(":"));
-	_ip = ipV4ToNl(ip);
+	
+	if (!ipPort.size()) return false;
 
-	std::stringstream ss(ipPort.substr((ipPort.find(":") + 1)));
+	size_t pos = ipPort.find(":");
 
-	unsigned short port;
-	ss >> std::dec >> port;
-	_port = htons(port);
+	bool success = ipV4ToNl(ipPort.substr(0, pos), _ip);
+
+	if (success && pos == std::string::npos)
+		return true;
+
+	if (pos == std::string::npos)
+		pos = 0;
+	else
+		++pos;
+
+	std::istringstream iss(ipPort.substr(pos));
+	if (!iss) return false;
+		
+	iss >> _port;
+
+	return iss.rdbuf()->in_avail() == 0 && success;
 }
+
+// bool	ServerBlock::setIpPort(const std::string& ipPort)
+// {
+	
+// 	if (!ipPort.size()) return false;
+
+// 	std::string ip = ipPort.substr(0,ipPort.find(":"));
+	
+// 	if (!ipV4ToNl(ip, _ip)
+// 		&& ip.size() == ipPort.size())
+// 	{
+// 		std::istringstream iss(ipPort);
+// 		if (!iss) return false;
+		
+// 		unsigned short port;
+// 		iss >> port;
+	
+// 		if (iss.rdbuf()->in_avail() != 0)
+// 			return false;		
+// 	}
+// 	else if (ip.size() != ipPort.size())
+// 	{
+// 		std::istringstream iss(ipPort.substr((ipPort.find(":") + 1)));
+// 		if (!iss) return false;
+		
+// 		unsigned short port;
+// 		iss >> port;
+	
+// 		if (iss.rdbuf()->in_avail() != 0)
+// 			return false;	
+// 		_port = htons(port);
+// 	}
+// 	return true;
+// }
 
 uint32_t	ServerBlock::getIp() const {return _ip;}
 

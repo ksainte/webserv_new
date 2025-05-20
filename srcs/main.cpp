@@ -31,10 +31,7 @@ int main() {
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
 		
-		// Quick test to init socket with Listener
-		std::list<IpPort> ipPortList;
-		ipPortList.push_back(IpPort("127.0.0.2", 8080));
-		Listener listener(ipPortList);
+		Listener listener(searcher.getAddresses());
 		
 		char* configFileName = std::getenv("WEBSERV_SAVE_CONFIG_FILE");
 		if (configFileName)

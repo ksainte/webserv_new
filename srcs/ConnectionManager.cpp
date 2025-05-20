@@ -40,7 +40,8 @@
 // 	if (it == _connMap.end())
 // 		return -1;
 
-// 	free(it->second);
+// 	free(it->s
+// econd);
 // 	_connMap.erase(clientFd);
 
 // 	return 0;

@@ -15,6 +15,9 @@ const char* ErrorMessages::E_SOCK_INIT =
 const char* ErrorMessages::E_BAD_ARG =
 "invalid argument";
 
+const char* ErrorMessages::E_BAD_IP =
+"invalid ip address";
+
 const char* ErrorMessages::E_BAD_TYPE =
 "invalid type";
 

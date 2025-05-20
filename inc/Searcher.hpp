@@ -37,6 +37,8 @@ class Searcher
 
 	const char* getLocationPrefix(int sockFd, const char* host, const char* url) const;
 
+	const std::list<std::pair<int, int> >& getAddresses() const;
+
 	const ConfigType::DirectiveValue* findServerDirective(int sockFd,
 		const std::string& key, const char* host) const;
 

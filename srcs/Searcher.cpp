@@ -135,6 +135,10 @@ void Searcher::_storeAddress(int address, int port) {
 	_addresses.push_back(std::make_pair(address, port));
 }
 
+const std::list<std::pair<int, int> >& Searcher::getAddresses() const 
+{return _addresses;}
+
+
 Searcher::Searcher(const Config& config) : _config(config)
 {
 	iterateThroughServerBlock(config.getServerBlocks().begin(),
