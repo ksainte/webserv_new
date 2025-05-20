@@ -30,10 +30,10 @@ int main() {
 		Tokenizer tokenizer("configFile/searchTest.config");
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
-		
+
 		Listener listener(searcher.getAddresses());
-		
-		char* configFileName = std::getenv("WEBSERV_SAVE_CONFIG_FILE");
+
+		char* configFileName = std::getenv("WEBSERV_CONF_FILE");
 		if (configFileName)
 		{
 			std::ofstream os(configFileName);
