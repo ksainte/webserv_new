@@ -52,17 +52,17 @@ for(std::map<std::string, std::string>::const_iterator it = key_value_headers.be
     value = it->second;
 }
 
-std::clog <<"\nValue is "<<  value << "\n";
-  const char *test = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents 
+std::clog <<"\nValue is "<<  value << "\n\n";
+  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents 
   // if (!test)
   // {
   //   return 0;
   // }
-  std::clog << " test is ------------------"<< test << "\n";
-  p = _searcher.findLocationDirective(sock_file_descriptor, "root", "2", test);
+  std::clog << " test is ------------------"<< route << "\n";
+  p = _searcher.findLocationDirective(sock_file_descriptor, "root", "2", route);
   if (p)
   {
-    std::clog << "\nvalue:\n";
+    std::clog << "\nroot_directory is:\n";
     for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
     {
         std::cout << *it << "\n";//checker si c est directory ou file
@@ -72,7 +72,7 @@ std::clog <<"\nValue is "<<  value << "\n";
   }
   if (!p)
     return 0;
-  std::string sub = filename.substr(strlen(test), filename.length() - strlen(test));
+  std::string sub = filename.substr(strlen(route), filename.length() - strlen(route));
   // std::cout << strlen(test) << "\n";
   std::clog << sub << "\n";
 
