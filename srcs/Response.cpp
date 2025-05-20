@@ -46,6 +46,7 @@ int Response::send_response(int sock_file_descriptor, std::string filename, std:
 	const ConfigType::DirectiveValue* p;
 
 // filename /contents/contact.html
+
 for(std::map<std::string, std::string>::const_iterator it = key_value_headers.begin(); it != key_value_headers.end(); ++it)
 {
   if (it->first == "host")
@@ -53,13 +54,10 @@ for(std::map<std::string, std::string>::const_iterator it = key_value_headers.be
 }
 
 std::clog <<"\nValue is "<<  value << "\n\n";
-  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, "2", filename.c_str());//recup /contents 
-  // if (!test)
-  // {
-  //   return 0;
-  // }
+  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, value.c_str(), filename.c_str());//recup /contents 
+
   std::clog << " test is ------------------"<< route << "\n";
-  p = _searcher.findLocationDirective(sock_file_descriptor, "root", "2", route);
+  p = _searcher.findLocationDirective(sock_file_descriptor, "root", value.c_str(), route);
   if (p)
   {
     std::clog << "\nroot_directory is:\n";

@@ -37,6 +37,7 @@ int main() {
 		// Quick test to init socket with Listener
 		std::list<IpPort> ipPortList;
 		ipPortList.push_back(IpPort("127.0.0.2", 8080));
+		ipPortList.push_back(IpPort("127.0.0.3", 8080));
 		Listener listener(ipPortList, searcher);
 		
 		char* configFileName = std::getenv("WEBSERV_SAVE_CONFIG_FILE");
@@ -47,10 +48,10 @@ int main() {
 			os.close();
 		}
 		// const ConfigType::DirectiveValue* p;
-		const char *test = searcher.getLocationPrefix(4, "2", "/contents.htm");
+		// const char *test = searcher.getLocationPrefix(4, "2", "/contents.htm");
 				// p = searcher.findLocationDirective(4, "root", "2", test);
 		// printf("%s\n", test);
-		std::cout << " test is ------------------"<< test << "\n";
+		// std::cout << " test is ------------------"<< test << "\n";
 		// if (p)
 		// {
 		// 	std::cout << "value :";
