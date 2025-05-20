@@ -28,6 +28,7 @@ int main() {
 		Tokenizer tokenizer("configFile/searchTest.config");
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
+		std::cout << "& of searcher is "<< &searcher;
 
 		Listener listener(searcher.getAddresses(), searcher);
 
@@ -38,7 +39,19 @@ int main() {
 			os << config.toJson(0) << std::endl;
 			os.close();
 		}
-		
+		const ConfigType::DirectiveValue* p;
+		const char *test = searcher.getLocationPrefix(4, "2", "/contents");
+		p = searcher.findLocationDirective(4, "root", "2", test);
+		printf("%s\n", test);
+		std::cout << " test is ------------------"<< test << "\n";
+		if (p)
+		{
+			std::cout << "value :";
+			for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
+			{
+					std::cout << *it << " ";
+				}
+			}
 		listener.run();
 	}
 	catch (std::exception& e) {
