@@ -1,54 +1,34 @@
 #include "../inc/Event.hpp"
 #include "../inc/Logger.hpp"
 
-// Event::Event(int fd, IEventHandler* handler) :
-// _fd(fd),
-// _handler(handler)
-// {LOG_DEBUG << "Event created\n";}
+Event::Event(int fd, IEventHandler* handler) :
+_fd(fd),
+_handler(handler)
+{LOG_DEBUG << "Event created\n";}
 
+Event::Event(): _fd(-1), _handler(NULL)
+{LOG_DEBUG << "Event created\n";}
 
-Event::Event()
+Event::~Event() {LOG_DEBUG << "Event destroyed\n";}
+
+Event::Event(const Event& other)
 {
-	LOG_DEBUG << "Event created\n";
+	_fd = other.getFd();
+	_handler = other.getHandler();
+	LOG_DEBUG << "Event copied\n";
 }
 
-void Event::fillEvent(int fd, IEventHandler* handler)
+Event& Event::operator=(const Event& other)
 {
-	_fd = fd;
-	_handler = handler;
-	LOG_DEBUG << "Event Filled\n";
+	if (this == &other)
+		return *this;
+
+	_fd = other.getFd();
+	_handler = other.getHandler();
+	LOG_DEBUG << "Event copied\n";
+	return *this;
 }
 
-// Event::~Event()
-// {LOG_DEBUG << "Event destroyed\n";}
+int Event::getFd() const {return _fd;}
 
-// Event::Event(const Event& other)
-// {
-// 	if (this != &other)
-// 	{
-// 		_fd = other.getFd();
-// 		_handler = other.getHandler();
-// 		LOG_DEBUG << "Event copied\n";
-// 	}
-// }
-
-// Event& Event::operator=(const Event& other)
-// {
-// 	if (this == &other)
-// 		return *this;
-
-// 	_fd = other.getFd();
-// 	_handler = other.getHandler();
-// 	LOG_DEBUG << "Event copied\n";
-// 	return *this;
-// }
-
-int Event::getFd() const
-{
-	return _fd;
-}
-
-IEventHandler* Event::getHandler() const
-{
-	return _handler;
-}
+IEventHandler* Event::getHandler() const {return _handler;}

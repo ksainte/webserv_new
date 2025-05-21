@@ -12,7 +12,6 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 
-
 int	Listener::handleEvent(const Event* event, int flags) 
 {
 	LOG_INFO << "New connection request\n";
@@ -22,7 +21,7 @@ int	Listener::handleEvent(const Event* event, int flags)
 	socklen_t client_len = sizeof(client_addr);
 	int clientfd = ::accept(event->getFd(), (struct sockaddr *)&client_addr, &client_len);
 
-	if (initNewConnection(clientfd, event->getFd()) == -1)
+	if (_connManager.initNewConnection(clientfd, event->getFd()) == -1)
 	{
 		close(clientfd);
 		return -1;
@@ -38,39 +37,30 @@ int Listener::handleError()
 	return false;
 }
 
-
-void	Listener::run()
+Listener::Listener(const std::list<IpPort>& ipPortList, EventManager& eventManager, ConnectionManager& connManager):
+_connManager(connManager),
+_eventManager(eventManager)
 {
-	while (getSigIntFlag() == false)
-	{
-		int numEvent = epoll_wait(_epfd, _events, MAX_EVENTS, 0);
-	
-		if (numEvent == -1)
-		{
-			LOG_CRITICAL << ErrorMessages::E_EPOLL_WAIT << ": " << strerror(errno);
-			throw std::runtime_error(ErrorMessages::E_EPOLL_WAIT);
-		}
-	
-		for (int i = 0; i < numEvent; ++i)
-		{
-			Event* event = static_cast<Event *>(_events[i].data.ptr);//ou ptr est soit celui de LISTENER soit celui de CONNECTION!
-			event->getHandler()->handleEvent(event, _events[i].events);
-		}
-	}
-}
-
-
-Listener::Listener(const std::list<IpPort>& ipPortList, Searcher &searcher): ConnectionManager(searcher)
-{
-
 	if (iterateThroughIpPortList(ipPortList) == -1)
 		throw std::runtime_error(ErrorMessages::E_SOCK_INIT);
 
+	int i = 0;
 	for (std::list<int>::const_iterator it = sockfds.begin(); it != sockfds.end(); ++it)
 	{
+		_events[i] = Event(*it, static_cast<IEventHandler *>(this));
+		_eventManager.registerEvent(*it, &_events[i]);
+		++i;
+	}
+}
 
-		addTcpEvent(*it, static_cast<IEventHandler *>(this));
-
+Listener::~Listener() 
+{
+	// 1. Iterate through each socket fd 
+	for (std::list<int>::const_iterator it = sockfds.begin(); it != sockfds.end(); ++it)
+	{
+		// 2. Close it
+		if (close(*it) == -1)
+			LOG_WARNING << strerror(errno);
 	}
 }
 
@@ -140,19 +130,3 @@ int Listener::iterateThroughIpPortList(const std::list<IpPort>& ipPortList)
 	}
 	return 0;
 }
-
-// Listener::~Listener() 
-// {
-// 	// 1. Iterate through each socket fd 
-// 	for (std::list<int>::const_iterator it = sockfds.begin(); it != sockfds.end(); ++it)
-// 	{
-// 		// 2. Close it
-// 		if (close(*it) == -1)
-// 			LOG_WARNING << strerror(errno);
-// 	}
-
-// 	for (std::map<int, Event *>::const_iterator it = _eventMap.begin(); it != _eventMap.end(); ++it)
-// 		delete it->second;
-
-// 	_eventMap.clear();
-// }

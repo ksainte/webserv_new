@@ -5,12 +5,11 @@ class Event
 {
 	public:
 
-	// Event(int fd, IEventHandler* handler);
 	Event();
-	void fillEvent(int fd, IEventHandler* handler);
-	// ~Event();
-	// Event(const Event& other);
-	// Event& operator=(const Event& other);
+	Event(int fd, IEventHandler* handler);
+	Event(const Event& other);
+	Event& operator=(const Event& other);
+	~Event();
 
 	int getFd() const;
 	IEventHandler* getHandler() const;
@@ -18,7 +17,6 @@ class Event
 	protected:
 
 	int _fd;
-	int _fd1;
 	IEventHandler *_handler;
 };
 #endif

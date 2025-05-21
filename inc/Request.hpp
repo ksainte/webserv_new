@@ -1,34 +1,31 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
-#include <vector>
-#include "../inc/Response.hpp"
-#define BUFFSIZE 1000
-#include <map>
-
-
+#include <string>
 class Request
 {
 	public:
 
 	Request();
-	// ~Request();
-	// Request(const Request& other);
-	// Request& operator=(const Request& other);
+	~Request();
+	Request(const Request& other);
+	Request& operator=(const Request& other);
 
-	std::string								getMethod() const;
- 	std::string								getFilename() const;
+	const std::string&	getMethod()		const;
+	const std::string&	getPath()			const;
+	const std::string&	getVersion()	const;	
+	const std::string&	getRawBytes()	const;
+	off_t 							getOffset() 	const;
+	const char*					getBuff() 		const;
+	int									getBuffSize() const;
 
-
-	int	read(int fd);
-	std::map<std::string, std::string>  &set_headers(void);
-	std::map<std::string, std::string> key_value_headers;
+	int		read(int fd);
 
 	protected:
-
-
-	char 						_buff[BUFFSIZE];
-	off_t 								_offset;
-	std::string 							str;
+	
+	static const int _BUFFSIZE = 1000;
+	char 				_buff[_BUFFSIZE] = {};
+	off_t 			_offset;
+	std::string _rawBytes;
 	std::string _method;
 	std::string _path;
 	std::string _version;

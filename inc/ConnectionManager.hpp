@@ -1,31 +1,24 @@
 #ifndef CONNECTIONMANAGER_HPP
 #define CONNECTIONMANAGER_HPP
 #include "Connection.hpp"
-#include "EventManager.hpp"
-#include <map>
-
 class Searcher;
-
-class ConnectionManager:public EventManager
+class EventManager;
+class ConnectionManager
 {
 	public:
 
-	ConnectionManager(Searcher &searcher);
+	ConnectionManager(Searcher &searcher, EventManager& eventManager);
 	~ConnectionManager();
 
 	int	initNewConnection(int clientFd, int sockFd);
-	// int handleEvent(const Event* p, int flags);
-	// int	closeConnection(int fd);
 	
-	// const std::map<int, Event *> &getData() const;
-	
-	public:
-	
-	int _connIndex;
-	Searcher &_searcher;
-	Connection connection[5];
-	static const int MAX_CONN = 1000;
+	private:
 
+	const Searcher&			_searcher;
+	const EventManager&	_eventManager;
+	static const int MAX_CONN = 5;
+	static int _numCon;
+	Connection connection[MAX_CONN];
 };
 #endif
 
