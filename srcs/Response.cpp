@@ -8,6 +8,7 @@
 #include <cstring>
 #include <sys/socket.h>
 #include "../inc/Searcher.hpp"
+#include <sys/stat.h>
 
 
 
@@ -36,6 +37,19 @@ int Response::send_to_cgi(int sock_file_descriptor, char *path)
   return 0;
 }
 
+int Response::isDirectoryExists(const char *path)
+{
+    struct stat stats;
+
+    stat(path, &stats);
+
+    // Check for file existence
+    if (S_ISDIR(stats.st_mode))
+        return 1;
+
+    return 0;
+}
+
 int Response::send_response(int sock_file_descriptor, std::string filename, std::string method_type, Searcher &_searcher, std::map<std::string, std::string> &key_value_headers)
 {
   std::cout << "filename is " << filename << "\n";
@@ -54,9 +68,14 @@ for(std::map<std::string, std::string>::const_iterator it = key_value_headers.be
 }
 
 std::clog <<"\nValue is "<<  value << "\n\n";
-  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, value.c_str(), filename.c_str());//recup /contents 
+  const char *route = _searcher.getLocationPrefix(sock_file_descriptor, value.c_str(), filename.c_str());//recup /contents
+  if (!route)
+  {
+    std::clog << "route is not valid\n";
+    return (0);
+  }
 
-  std::clog << " test is ------------------"<< route << "\n";
+  // std::clog << " ROUTEEEEEEEEEEEEEEEE is "<< route << "\n";
   p = _searcher.findLocationDirective(sock_file_descriptor, "root", value.c_str(), route);
   if (p)
   {
@@ -69,10 +88,43 @@ std::clog <<"\nValue is "<<  value << "\n\n";
     }
   }
   if (!p)
+  {
+    std::clog << "root is not valid\n";
     return 0;
+  }
+
+  char arr[root_directory.length() + 1]; 
+  memset(arr,0, root_directory.length());
+  for (int x = 0; x < sizeof(arr); x++) { 
+  arr[x] = root_directory[x]; 
+  }
+
+  if (isDirectoryExists(arr))
+    std::clog << "\n ROOOOOT is a directory!\n";
+  else if ((access(arr, F_OK) == 0))
+  {
+    std::clog << "\n ROOOOOT is a file! Send directly\n";
+    send_to_cgi(sock_file_descriptor, arr);
+  }
+  else
+  {
+    std:: cout << "\nERROR HERE (file not found)\n";
+
+		std::string send_501_error = "HTTP/1.0 501 Not Implemented\r\n"
+                             "Content-Type: text/plain\r\n"
+                             "Content-Length: 19\r\n"
+                             "Connection: close\r\n"
+                             "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+                             "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+                             "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n" 
+                             "501 Not Implemented";
+      send(sock_file_descriptor, send_501_error.c_str(), send_501_error.size(), 0);
+      return(0);
+  }
+
   std::string sub = filename.substr(strlen(route), filename.length() - strlen(route));
   // std::cout << strlen(test) << "\n";
-  std::clog << sub << "\n";
+  std::clog << "uri is "<< sub << "\n";
 
   //recuperer l uri!
 // exit(1);
@@ -90,13 +142,13 @@ std::clog <<"\nValue is "<<  value << "\n\n";
 
   // std::cout << "root directory is " << method_type << "\n";
 
-char arr[root_directory.length() + 1]; 
-memset(arr,0, root_directory.length());
-  for (int x = 0; x < sizeof(arr); x++) { 
-    arr[x] = root_directory[x]; 
+char arr1[root_directory.length() + 1]; 
+memset(arr1,0, root_directory.length());
+  for (int x = 0; x < sizeof(arr1); x++) { 
+    arr1[x] = root_directory[x]; 
   }
 
-  if ((access(arr, F_OK) < 0)) 
+  if ((access(arr1, F_OK) < 0)) 
   {
     std:: cout << "\nERROR (file not found)\n";
 
@@ -114,7 +166,7 @@ memset(arr,0, root_directory.length());
     if ((method_type.compare("GET") == 0))
     {
       std::cout << "\nReceived GET method\n";
-      send_to_cgi(sock_file_descriptor, arr);
+      send_to_cgi(sock_file_descriptor, arr1);
     }
   }
 
