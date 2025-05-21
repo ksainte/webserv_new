@@ -9,4 +9,8 @@
 !configFile/**
 !contents/
 !contents/**
+!cgi-bin/
+!cgi-bin/**
+!GET.cpp
+!index.html
 !.gitignore
