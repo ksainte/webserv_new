@@ -43,7 +43,7 @@ int	Request::read(int fd)
 
 std::map<std::string, std::string> &Request::set_headers(void)
 {
-  	std::string index_filename = "/index.html";
+  	// std::string index_filename = "/index.html";
 
 
 	std::istringstream stream(str);
@@ -56,7 +56,7 @@ std::map<std::string, std::string> &Request::set_headers(void)
 		std::istringstream lineStream(line);//how does it know to omit /?
 		lineStream >> _method >> _path >> _version;
 		
-		_path = (_path.compare("/") == 0) ? index_filename : _path;
+		// _path = (_path.compare("/") == 0) ? index_filename : _path;
 	}
 	while (std::getline(stream, line) && line != "\r") 
 	{

@@ -71,15 +71,15 @@ std::clog <<"\nValue is "<<  value << "\n\n";
   const char *route = _searcher.getLocationPrefix(sock_file_descriptor, value.c_str(), filename.c_str());//recup /contents
   if (!route)
   {
-    std::clog << "route is not valid\n";
+    std::clog << "\nroute is not valid\n";
     return (0);
   }
 
-  // std::clog << " ROUTEEEEEEEEEEEEEEEE is "<< route << "\n";
+  std::clog << "\nROUTE/LOCATION is "<< route << "\n";
   p = _searcher.findLocationDirective(sock_file_descriptor, "root", value.c_str(), route);
   if (p)
   {
-    std::clog << "\nroot_directory is:\n";
+    std::clog << "\nROOT_DIRECTORY is:\n";
     for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
     {
         std::cout << *it << "\n";//checker si c est directory ou file
@@ -93,10 +93,18 @@ std::clog <<"\nValue is "<<  value << "\n\n";
     return 0;
   }
 
+  //APPEND URI A ROOT SI EXIST!
+  std::string sub = filename.substr(strlen(route), filename.length() - strlen(route));
+  std::clog << "URI is "<< sub << "\n";
+  root_directory.append(sub);
+  std::cout << "ROOT_DIRECTORY AFTER APPEND IS:\n" << root_directory << "\n";
+
+
   char arr[root_directory.length() + 1]; 
   memset(arr,0, root_directory.length());
-  for (int x = 0; x < sizeof(arr); x++) { 
-  arr[x] = root_directory[x]; 
+  for (int x = 0; x < sizeof(arr); x++) 
+  {
+    arr[x] = root_directory[x]; 
   }
 
   if (isDirectoryExists(arr))
@@ -122,53 +130,58 @@ std::clog <<"\nValue is "<<  value << "\n\n";
       return(0);
   }
 
-  std::string sub = filename.substr(strlen(route), filename.length() - strlen(route));
-  // std::cout << strlen(test) << "\n";
-  std::clog << "uri is "<< sub << "\n";
-
-  //recuperer l uri!
-// exit(1);
-
-
-  if ((filename.compare("/index.html") == 0)) 
+  p = _searcher.findLocationDirective(sock_file_descriptor, "index", value.c_str(), route);
+  if (p)
   {
-    root_directory = "./index.html";
-  }
-  else 
-  {
-    root_directory.append(sub);
-  }
-
-
-  // std::cout << "root directory is " << method_type << "\n";
-
-char arr1[root_directory.length() + 1]; 
-memset(arr1,0, root_directory.length());
-  for (int x = 0; x < sizeof(arr1); x++) { 
-    arr1[x] = root_directory[x]; 
-  }
-
-  if ((access(arr1, F_OK) < 0)) 
-  {
-    std:: cout << "\nERROR (file not found)\n";
-
-		std::string send_501_error = "HTTP/1.0 501 Not Implemented\r\n"
-                             "Content-Type: text/plain\r\n"
-                             "Content-Length: 19\r\n"
-                             "Connection: close\r\n"
-                             "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-                             "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-                             "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n" 
-                             "501 Not Implemented";
-      send(sock_file_descriptor, send_501_error.c_str(), send_501_error.size(), 0);
-  }
-  else {
-    if ((method_type.compare("GET") == 0))
+    std::clog << "\nINDEX_DIRECTORY is:\n";
+    for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
     {
-      std::cout << "\nReceived GET method\n";
-      send_to_cgi(sock_file_descriptor, arr1);
+        std::cout << *it << "\n";//checker si c est directory ou file
+        std::string temp;
+        temp = root_directory;
+        temp.append("/");
+        temp.append(*it);
+        std::cout << "New is :\n" << temp << "\n";
+
+        char arr1[temp.length() + 1]; 
+        memset(arr1,0, temp.length());
+          for (int x = 0; x < sizeof(arr1); x++) { 
+            arr1[x] = temp[x]; 
+          }
+
+          if ((access(arr1, F_OK) < 0)) 
+          {
+            std::clog << "\n -----------no access\n";
+            continue;
+            // std:: cout << "\nERROR (file not found)\n";
+
+            // std::string send_501_error = "HTTP/1.0 501 Not Implemented\r\n"
+            //                         "Content-Type: text/plain\r\n"
+            //                         "Content-Length: 19\r\n"
+            //                         "Connection: close\r\n"
+            //                         "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+            //                         "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+            //                         "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n" 
+            //                         "501 Not Implemented";
+            //   send(sock_file_descriptor, send_501_error.c_str(), send_501_error.size(), 0);
+          }
+          else {
+            if ((method_type.compare("GET") == 0))
+            {
+              std::cout << "\nReceived GET method\n";
+              send_to_cgi(sock_file_descriptor, arr1);
+            }
+          }
+
+        //si directory, append uri, donc / et contact.html
     }
   }
+  if (!p)
+  {
+    std::clog << "index directory is not valid\n";
+    return (0);
+  }
+  std::clog << "\nindex is not EXISTING\n";
 
   return 0;
 }
