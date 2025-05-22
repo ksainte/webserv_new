@@ -31,8 +31,9 @@ int main() {
 		ipPortList.push_back(IpPort("127.0.0.2", 8080));
 
 		EventManager eventManager;
-		Listener listener(ipPortList, searcher, eventManager);
-		
+		ConnectionManager connManager(searcher, eventManager);
+		Listener listener(ipPortList, eventManager, connManager);
+	
 		eventManager.run();
 	}
 	catch (std::exception& e) {

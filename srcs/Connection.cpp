@@ -25,6 +25,7 @@ _clientFd(-1)
 {LOG_DEBUG << "Connection created\n";}
 
 Connection::Connection(const Connection& other):
+Request(other),
 _manager(other.getManager()),
 _searcher(other.getSearcher()),
 _sockFd(other.getSockFd()),
@@ -56,15 +57,14 @@ int Connection::handleEvent(const Event* p, int flags)
 	else if (flags & EPOLLOUT)
   {
 		_manager->unregisterEvent(p->getFd());
-		close(p->getFd());
-
+		
 		int pid = fork();
-		if (pid != 0) 
-			return 0;
-
 		//child
-		sendResponse();
-	}
+		if (pid == 0) 
+			sendResponse();
+	
+		close(p->getFd());
+	}	
 	return 0;
 }
 
@@ -129,42 +129,42 @@ bool Connection::sendResponse() const
     return(0);
 	}
 
-  p = _searcher.findLocationDirective(sock_file_descriptor, "index", value.c_str(), route);
-  if (p)
-  {
-    std::clog << "\nINDEX_DIRECTORY is:\n";
-    for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
-    {
-        std::cout << *it << "\n";//checker si c est directory ou file
-        std::string temp;
-        temp = root_directory;
-        temp.append("/");
-        temp.append(*it);
-        std::cout << "New is :\n" << temp << "\n";
+  // p = _searcher.findLocationDirective(sock_file_descriptor, "index", value.c_str(), route);
+  // if (p)
+  // {
+  //   std::clog << "\nINDEX_DIRECTORY is:\n";
+  //   for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
+  //   {
+  //       std::cout << *it << "\n";//checker si c est directory ou file
+  //       std::string temp;
+  //       temp = root_directory;
+  //       temp.append("/");
+  //       temp.append(*it);
+  //       std::cout << "New is :\n" << temp << "\n";
 
-        char arr1[temp.length() + 1]; 
-        memset(arr1,0, temp.length());
-          for (long unsigned int x = 0; x < sizeof(arr1); x++) { 
-            arr1[x] = temp[x]; 
-          }
+  //       char arr1[temp.length() + 1]; 
+  //       memset(arr1,0, temp.length());
+  //         for (long unsigned int x = 0; x < sizeof(arr1); x++) { 
+  //           arr1[x] = temp[x]; 
+  //         }
 
-          if ((access(arr1, F_OK) < 0)) 
-            continue;
-          else {
-            if ((method_type.compare("GET") == 0))
-            {
-              std::cout << "\nReceived GET method\n";
-              send_to_cgi(sock_file_descriptor, arr1);
-            }
-          }
-    }
-  }
-  if (!p)
-  {
-    std::clog << "index directory is not valid\n";
-    return (0);
-  }
-  std::clog << "\nindex is not EXISTING\n";
+  //         if ((access(arr1, F_OK) < 0)) 
+  //           continue;
+  //         else {
+  //           if ((method_type.compare("GET") == 0))
+  //           {
+  //             std::cout << "\nReceived GET method\n";
+  //             send_to_cgi(sock_file_descriptor, arr1);
+  //           }
+  //         }
+  //   }
+  // }
+  // if (!p)
+  // {
+  //   std::clog << "index directory is not valid\n";
+  //   return (0);
+  // }
+  // std::clog << "\nindex is not EXISTING\n";
 
   return 0;
 }
@@ -208,7 +208,7 @@ bool	Connection::setHeaders()
 int Connection::send_to_cgi(const std::string& absPath) const
 {
   close(1);
-  dup2(_sockFd, 1);
+  dup2(_clientFd, 1);
 
   char *arr[2] = {const_cast<char*>(absPath.c_str()), NULL};
 
@@ -235,6 +235,10 @@ int Connection::isDirectoryExists(const char *path) const
         return 1;
 
     return 0;
+}
+
+void Connection::setEvent() {
+	_event = Event(_clientFd, this);
 }
 
 const std::map<std::string, std::string>&

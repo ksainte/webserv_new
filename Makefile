@@ -6,7 +6,6 @@ SRCS_DIR := srcs
 
 CFLAGS   := -Wall \
             -Wextra \
-						-Werror \
             -g \
             -std=c++98 \
             -I$(INCLUDE)
@@ -45,4 +44,3 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
-

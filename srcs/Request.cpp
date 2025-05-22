@@ -30,7 +30,10 @@ int	Request::read(int fd)
 	return (0);
 }
 
-Request::Request(): _offset(0) {LOG_DEBUG << "Request created";}
+Request::Request(): _offset(0) {
+	std::memset(_buff, 0, _BUFFSIZE);
+	LOG_DEBUG << "Request created";
+}
 
 Request::Request(const Request& other): 
 _offset(other.getOffset()), 

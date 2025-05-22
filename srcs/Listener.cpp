@@ -48,7 +48,7 @@ _eventManager(eventManager)
 	for (std::list<int>::const_iterator it = sockfds.begin(); it != sockfds.end(); ++it)
 	{
 		_events[i] = Event(*it, static_cast<IEventHandler *>(this));
-		_eventManager.registerEvent(*it, &_events[i]);
+		_eventManager.registerEvent(uint32_t(EPOLLIN), &_events[i]);
 		++i;
 	}
 }

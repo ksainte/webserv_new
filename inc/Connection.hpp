@@ -49,9 +49,9 @@ class Connection : public virtual IEventHandler, public Request
 	EventManager*		getManager() const;
 	Event*					getEvent();
 	
+	void	setEvent();
 	void	setSockFd(int sockFd);
 	void	setClientFd(int clientFd);
-	void	setEvent();
 
 	const Headers& 
 	getHeaders() const;

@@ -1,6 +1,7 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 #include <string>
+#include <sys/types.h>
 class Request
 {
 	public:
@@ -23,7 +24,7 @@ class Request
 	protected:
 	
 	static const int _BUFFSIZE = 1000;
-	char 				_buff[_BUFFSIZE] = {};
+	char 				_buff[_BUFFSIZE];
 	off_t 			_offset;
 	std::string _rawBytes;
 	std::string _method;

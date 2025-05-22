@@ -14,8 +14,8 @@ class ConnectionManager
 	
 	private:
 
-	const Searcher&			_searcher;
 	const EventManager&	_eventManager;
+	const Searcher&			_searcher;
 	static const int MAX_CONN = 5;
 	static int _numCon;
 	Connection connection[MAX_CONN];
