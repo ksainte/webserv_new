@@ -142,43 +142,6 @@ bool Connection::sendResponse() const
   return(0);
 }
 
-  // p = _searcher.findLocationDirective(sock_file_descriptor, "index", value.c_str(), route);
-  // if (p)
-  // {
-  //   std::clog << "\nINDEX_DIRECTORY is:\n";
-  //   for (ConfigType::DirectiveValueIt it = (*p).begin(); it != (*p).end(); ++it) 
-  //   {
-  //       std::cout << *it << "\n";//checker si c est directory ou file
-  //       std::string temp;
-  //       temp = root_directory;
-  //       temp.append("/");
-  //       temp.append(*it);
-  //       std::cout << "New is :\n" << temp << "\n";
-
-  //       char arr1[temp.length() + 1]; 
-  //       memset(arr1,0, temp.length());
-  //         for (long unsigned int x = 0; x < sizeof(arr1); x++) { 
-  //           arr1[x] = temp[x]; 
-  //         }
-
-  //         if ((access(arr1, F_OK) < 0)) 
-  //           continue;
-  //         else {
-  //           if ((method_type.compare("GET") == 0))
-  //           {
-  //             std::cout << "\nReceived GET method\n";
-  //             send_to_cgi(sock_file_descriptor, arr1);
-  //           }
-  //         }
-  //   }
-  // }
-  // if (!p)
-  // {
-  //   std::clog << "index directory is not valid\n";
-  //   return (0);
-  // }
-  // std::clog << "\nindex is not EXISTING\n";
-
 bool	Connection::setHeaders()
 {
 	std::istringstream iss(_rawBytes);
