@@ -12,14 +12,34 @@ CC       := c++
 CFLAGS   := -Wall \
             -Wextra \
             -Werror \
+            -O2 \
             -g \
             -std=c++98 \
             -I$(INCLUDE)
 
 # Source files, object files, and dependency files
-SRCS     := $(shell find $(SRCS_DIR) -name '*.cpp')
-OBJS     := $(patsubst $(SRCS_DIR)/%.cpp, $(BIN_DIR)/%.o, $(SRCS))
-DEPS     := $(patsubst $(SRCS_DIR)/%.cpp, $(DEP_DIR)/%.d, $(SRCS))
+SRCS := $(shell find $(SRCS_DIR) -name '*.cpp')
+OBJS := $(SRCS:$(SRCS_DIR)/%.cpp=$(BIN_DIR)/%.o)
+DEPS := $(SRCS:$(SRCS_DIR)/%.cpp=$(DEP_DIR)/%.d)
+
+# --- Parallel Compilation Setup ---
+# Attempt to determine the number of CPU cores for parallel compilation.
+# Defaults to 1 if detection fails.
+ifndef NPROC
+  NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
+endif
+
+# GNU Make specific: Set the default number of parallel jobs.
+# This tells Make to try and run NPROC jobs in parallel.
+# If NPROC is 1, it will run sequentially.
+# Users can override this by passing -jN to the make command (e.g., make -j1 for serial).
+ifneq ($(NPROC),1)
+  .JOBS := $(NPROC)
+  $(info Building with up to $(NPROC) parallel jobs (GNU Make). Override with 'make -jN'.)
+else
+  $(info Building sequentially (1 core detected or detection failed, or NPROC explicitly set to 1).)
+endif
+# --- End Parallel Compilation Setup ---
 
 # Default target
 all: $(NAME)
@@ -27,7 +47,7 @@ all: $(NAME)
 # Link the executable
 $(NAME): $(OBJS)
 	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS)
-	@printf "Linking: \033[0;32m$(NAME)\033[0m\n"
+	@printf "Linking: $(NAME)\n"
 
 # Include the generated dependency files
 # The '-' before include suppresses errors if the files don't exist (e.g., on first build)
@@ -40,20 +60,20 @@ $(NAME): $(OBJS)
 # -MP: Create phony targets for prerequisites, avoids errors if headers are removed
 # -MF <file>: Write dependencies to <file>
 $(BIN_DIR)/%.o: $(SRCS_DIR)/%.cpp Makefile
-	@mkdir -p $(dir $@) # Ensure the object file directory exists (e.g., bin/subdir/)
-	@mkdir -p $(dir $(patsubst $(SRCS_DIR)/%.cpp, $(DEP_DIR)/%.d, $<)) # Ensure the dependency file directory exists (e.g., dep/subdir/)
-	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@ -MF $(patsubst $(SRCS_DIR)/%.cpp, $(DEP_DIR)/%.d, $<)
-	@printf "Compiling: \033[0;33m$(notdir $<)\033[0m -> \033[0;36m$@\033[0m (deps: \033[0;35m$(patsubst $(SRCS_DIR)/%.cpp, $(DEP_DIR)/%.d, $<)\033[0m)\n"
+	@mkdir -p $(dir $@)
+	@mkdir -p $(DEP_DIR)
+	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@ -MF $(DEP_DIR)/$(notdir $(basename $<)).d
+	@printf "Compiling: $(notdir $<) -> $@ (deps: $(DEP_DIR)/$(notdir $(basename $<)).d)\n"
 
 # Clean object files and dependency files
 clean:
 	@rm -rf $(BIN_DIR) $(DEP_DIR)
-	@printf "Cleaning: \033[0;31m$(BIN_DIR)\033[0m and \033[0;31m$(DEP_DIR)\033[0m\n"
+# @printf "Cleaning: $(BIN_DIR) and $(DEP_DIR)\n"
 
 # Clean everything including the executable
 fclean: clean
 	@rm -f $(NAME)
-	@printf "Cleaning: \033[0;31m$(NAME)\033[0m\n"
+# @printf "Cleaning: $(NAME)\n"
 
 # Rebuild everything
 re: fclean all
