@@ -37,11 +37,11 @@ int Listener::handleError()
 	return false;
 }
 
-Listener::Listener(const std::list<IpPort>& ipPortList, EventManager& eventManager, ConnectionManager& connManager):
+Listener::Listener(const std::list<std::pair<int, int> >& addresses, EventManager& eventManager, ConnectionManager& connManager):
 _connManager(connManager),
 _eventManager(eventManager)
 {
-	if (iterateThroughIpPortList(ipPortList) == -1)
+	if (iterateThroughIpPortList(addresses) == -1)
 		throw std::runtime_error(ErrorMessages::E_SOCK_INIT);
 
 	int i = 0;
@@ -64,7 +64,7 @@ Listener::~Listener()
 	}
 }
 
-int Listener::initSockFd(const IpPort& ipPort) const
+int Listener::initSockFd(const std::pair<int, int>& address) const
 {
 
 	// 1. Create a new TCP socket
@@ -80,10 +80,10 @@ int Listener::initSockFd(const IpPort& ipPort) const
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(ipPort.port);
+	addr.sin_port = address.second;
 
 	//Use our own converter
-	addr.sin_addr.s_addr = ipV4ToNl(ipPort.ip);
+	addr.sin_addr.s_addr = address.first;
 
 	// 3. Configure the socket
 	int opt = 1;
@@ -113,11 +113,11 @@ int Listener::initSockFd(const IpPort& ipPort) const
 	return sockfd;
 }
 
-int Listener::iterateThroughIpPortList(const std::list<IpPort>& ipPortList) 
+int Listener::iterateThroughIpPortList(const std::list<std::pair<int, int> >& addresses) 
 {
 	
 	// 1. Iterate through ip:port list
-	for (std::list<IpPort>::const_iterator it = ipPortList.begin(); it != ipPortList.end(); ++it)
+	for (std::list<std::pair<int, int> >::const_iterator it = addresses.begin(); it != addresses.end(); ++it)
 	{
 
 		// 2. Call initSockFd for each list element

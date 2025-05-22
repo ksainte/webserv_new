@@ -19,7 +19,7 @@ class ServerBlock: public Trie, public ADirective {
 	~ServerBlock();
 	std::string toJson(int indentLevel) const;
 
-	void	setIpPort(const std::string& ipPort);
+	bool	setIpPort(const std::string& ipPort);
 
 	uint32_t	getIp() const;
 	uint32_t	getPort() const;

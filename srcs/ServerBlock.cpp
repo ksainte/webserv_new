@@ -29,16 +29,34 @@ ServerBlock::~ServerBlock() {
 	LOG_DEBUG << "ServerBlock destroyed";
 }
 
-void	ServerBlock::setIpPort(const std::string& ipPort)
+bool	ServerBlock::setIpPort(const std::string& ipPort)
 {
-	std::string ip = ipPort.substr(0,ipPort.find(":"));
-	_ip = ipV4ToNl(ip);
+	
+	if (!ipPort.size()) return false;
 
-	std::stringstream ss(ipPort.substr((ipPort.find(":") + 1)));
+	size_t pos = ipPort.find(":");
 
-	unsigned short port;
-	ss >> std::dec >> port;
-	_port = htons(port);
+	// early return because incomplete ip address completion using default ip:port
+	// value is not currently implemented
+	if (pos == std::string::npos) return false;
+
+	bool success = ipV4ToNl(ipPort.substr(0, pos), _ip);
+
+	if (success && pos == std::string::npos)
+		return true;
+
+	if (pos == std::string::npos)
+		pos = 0;
+	else
+		++pos;
+
+	std::istringstream iss(ipPort.substr(pos));
+	if (!iss) return false;
+		
+	iss >> _port;
+	_port = htons(_port);
+
+	return iss.rdbuf()->in_avail() == 0 && success;
 }
 
 uint32_t	ServerBlock::getIp() const {return _ip;}

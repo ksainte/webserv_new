@@ -4,7 +4,6 @@
 #include "EventManager.hpp"
 #include "IEventHandler.hpp"
 #include <list>
-#include <map>
 
 typedef struct IpPort 
 {
@@ -21,7 +20,7 @@ class Listener: public virtual IEventHandler
 
 	public:
 
-	Listener(const std::list<IpPort>& ipPortList, EventManager& eventManager, ConnectionManager& connManager);
+	Listener(const std::list<std::pair<int, int> >& addresses, EventManager& eventManager, ConnectionManager& connManager);
 	~Listener();
 
 	private:
@@ -32,8 +31,8 @@ class Listener: public virtual IEventHandler
 	EventManager& _eventManager;
 	std::list<int> sockfds;
 
-	int	initSockFd(const IpPort& ipPort) const;
-	int	iterateThroughIpPortList(const std::list<IpPort>& ipPortList);
+	int	initSockFd(const std::pair<int, int>& address) const;
+	int	iterateThroughIpPortList(const std::list<std::pair<int, int> >& addresses);
 	int	handleEvent(const Event* event, int flags);
 	int	handleError();
 

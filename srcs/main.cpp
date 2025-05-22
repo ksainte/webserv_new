@@ -25,15 +25,10 @@ int main() {
 		Tokenizer tokenizer("configFile/single-server.config");
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
-		
-		// Quick test to init socket with Listener
-		std::list<IpPort> ipPortList;
-		ipPortList.push_back(IpPort("127.0.0.2", 8080));
-
 		EventManager eventManager;
 		ConnectionManager connManager(searcher, eventManager);
-		Listener listener(ipPortList, eventManager, connManager);
-	
+		Listener listener(searcher.getAddresses(), eventManager, connManager);
+
 		eventManager.run();
 	}
 	catch (std::exception& e) {

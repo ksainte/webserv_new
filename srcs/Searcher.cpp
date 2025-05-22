@@ -48,6 +48,8 @@ const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname)
 	
 	for (ConfigType::ServerBlockIt it = serverBlocks.begin(); it != serverBlocks.end(); ++it)
 	{
+		int ip = (*it).getIp();
+		int port = (*it).getPort();
 		if ((*it).getIp() != addr.sin_addr.s_addr
 			|| (*it).getPort() != addr.sin_port)
 			continue;
@@ -70,10 +72,7 @@ const char* Searcher::getLocationPrefix(int sockFd, const char* host, const char
 	const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
 	const LocationBlock* locationBlock = serverBlock.search(url);
 	if (!locationBlock) 
-	{
-		std::cout << "getLocationPrefix returns null!";
 		return NULL;
-	}
 	return locationBlock->getPrefix().c_str();
 }
 
@@ -124,5 +123,29 @@ const ConfigType::DirectiveValue* Searcher::findServerDirective(int sockFd,
 	return &(it->second);
 }
 
-Searcher::Searcher(const Config& config) : _config(config) 
-{LOG_DEBUG << "Searcher created";}
+void		Searcher::iterateThroughServerBlock(
+	const ConfigType::ServerBlockIt& first,
+	const ConfigType::ServerBlockIt& last) 
+{
+		for (ConfigType::ServerBlockIt it = first; it != last; ++it) {
+			if (std::find_if(_addresses.begin(), _addresses.end(), 
+				FindPairEqual(std::make_pair((*it).getIp(), (*it).getPort()))) == _addresses.end()) {
+				_storeAddress((*it).getIp(), (*it).getPort());
+			}
+		}
+}
+
+void Searcher::_storeAddress(int address, int port) {
+	_addresses.push_back(std::make_pair(address, port));
+}
+
+const std::list<std::pair<int, int> >& Searcher::getAddresses() const 
+{return _addresses;}
+
+
+Searcher::Searcher(const Config& config) : _config(config)
+{
+	iterateThroughServerBlock(config.getServerBlocks().begin(),
+	 config.getServerBlocks().end());
+	LOG_DEBUG << "Searcher created";
+}
