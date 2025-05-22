@@ -116,6 +116,7 @@ bool Connection::sendResponse() const
 			for (ConfigType::DirectiveValueIt it = p->begin(); it != p->end(); ++it) {
 				
 				std::string tmp(absPath);
+				tmp.append("/");
 				tmp.append(*it);
 
 				stat(tmp.c_str(), &stats);
