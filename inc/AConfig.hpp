@@ -1,6 +1,7 @@
 #pragma once
 #include "../inc/types/ConfigType.hpp"
 #include "../inc/types/TokenType.hpp"
+#include "../inc/ServerBlock.hpp"
 #include <cassert>
 
 class AConfig : public ConfigType

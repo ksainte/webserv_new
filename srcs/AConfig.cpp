@@ -1,7 +1,8 @@
 #include "../inc/AConfig.hpp"
 #include "../inc/Logger.hpp"
-
+#include "../inc/ServerBlock.hpp"
 #include <sstream>
+
 
 const ConfigType::ServerBlocks& AConfig::getServerBlocks() const {return _serverBlocks;}
 

@@ -60,8 +60,10 @@ int Connection::handleEvent(const Event* p, int flags)
 		
 		int pid = fork();
 		//child
-		if (pid == 0) 
+		if (pid == 0) {
 			sendResponse();
+			exit(1);
+		}
 	
 		close(p->getFd());
 	}	
@@ -110,23 +112,35 @@ bool Connection::sendResponse() const
 			if (!S_ISDIR(stats.st_mode))
 				send_to_cgi(absPath.c_str());
 		
+		p = _searcher->findLocationDirective(_sockFd, "index", host.c_str(), route);
+		if (p) {
+			for (ConfigType::DirectiveValueIt it = p->begin(); it != p->end(); ++it) {
+				
+				std::string tmp(absPath);
+				tmp.append(*it);
+
+				stat(tmp.c_str(), &stats);
+
+				if (!access(absPath.c_str(), F_OK)
+					&& !S_ISDIR(stats.st_mode))
+					send_to_cgi(tmp);
+			}
+		}
 	}
 
-	if ((access(absPath.c_str(), F_OK) != 0))
-	{
-		std::string e501 =
-		"HTTP/1.0 501 Not Implemented\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 19\r\n"
-    "Connection: close\r\n"
-    "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-    "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-    "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n" 
-    "501 Not Implemented";
+	std::string e501 =
+	"HTTP/1.0 501 Not Implemented\r\n"
+	"Content-Type: text/plain\r\n"
+	"Content-Length: 19\r\n"
+	"Connection: close\r\n"
+	"Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+	"Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+	"Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n" 
+	"501 Not Implemented";
 
-    send(_sockFd, e501.c_str(), e501.size(), 0);
-    return(0);
-	}
+  send(_sockFd, e501.c_str(), e501.size(), 0);
+  return(0);
+}
 
   // p = _searcher.findLocationDirective(sock_file_descriptor, "index", value.c_str(), route);
   // if (p)
@@ -164,9 +178,6 @@ bool Connection::sendResponse() const
   //   return (0);
   // }
   // std::clog << "\nindex is not EXISTING\n";
-
-  return 0;
-}
 
 bool	Connection::setHeaders()
 {
@@ -219,7 +230,7 @@ int Connection::send_to_cgi(const std::string& absPath) const
   {
     std::cout << "result false\n";
   }
-  return 0;
+  exit(1);
 }
 
 int Connection::isDirectoryExists(const char *path) const
