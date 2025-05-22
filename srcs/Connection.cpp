@@ -106,7 +106,7 @@ bool Connection::sendResponse() const
 			absPath.append((_path.substr(strlen(route))));
 
 		stat(absPath.c_str(), &stats);
-		
+
 		if (!access(absPath.c_str(), F_OK))
 			if (!S_ISDIR(stats.st_mode))
 				send_to_cgi(absPath.c_str());

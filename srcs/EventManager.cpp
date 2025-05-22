@@ -76,7 +76,8 @@ void	EventManager::run()
 		for (int i = 0; i < numEvent; ++i)
 		{
 			Event* event = static_cast<Event *>(_events[i].data.ptr);
-			event->getHandler()->handleEvent(event, _events[i].events);
+			if (event->getHandler()->handleEvent(event, _events[i].events) == -1)
+				unregisterEvent(event->getFd());
 		}
 	}
 }
