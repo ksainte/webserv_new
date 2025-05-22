@@ -73,7 +73,6 @@ int Connection::handleEvent(const Event* p, int flags)
 bool Connection::sendResponse() const
 {
   std::string root_directory;
-  std::string value;
 	const ConfigType::DirectiveValue* p;
 
 	std::string host("");
@@ -88,7 +87,7 @@ bool Connection::sendResponse() const
     return (0);
   }
 
-  p = _searcher->findLocationDirective(_sockFd, "root", value.c_str(), route);
+  p = _searcher->findLocationDirective(_sockFd, "root", host.c_str(), route);
 	if (!p || !(*p)[0].size())
 	{
 		std::clog << "root is not valid\n";
