@@ -48,8 +48,6 @@ const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname)
 	
 	for (ConfigType::ServerBlockIt it = serverBlocks.begin(); it != serverBlocks.end(); ++it)
 	{
-		int ip = (*it).getIp();
-		int port = (*it).getPort();
 		if ((*it).getIp() != addr.sin_addr.s_addr
 			|| (*it).getPort() != addr.sin_port)
 			continue;
