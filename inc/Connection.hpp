@@ -16,11 +16,9 @@ class Connection : public virtual IEventHandler, public Request
 	typedef std::map<std::string, std::string> Headers;
 	typedef std::map<std::string, std::string>::const_iterator HeaderIt;
 
-
 	bool	sendResponse() const;
 	int 	send_to_cgi(const std::string& absPath) const;
 	int isDirectoryExists(const char *path) const;
-
 
 	EventManager*	_manager;
 	Searcher* 		_searcher;

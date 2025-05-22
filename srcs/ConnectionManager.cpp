@@ -13,7 +13,7 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 	newCon.setSockFd(sockFd);
 	newCon.setClientFd(clientFd);
 	newCon.setEvent();
-	
+
 	uint32_t eventFlags = EPOLLIN;
 	if (_eventManager.registerEvent(eventFlags, newCon.getEvent()) == -1)
 		return -1;
@@ -23,7 +23,7 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 }
 
 ConnectionManager::ConnectionManager(Searcher &searcher, EventManager& eventManager): 
-_eventManager(eventManager), 
+_eventManager(eventManager),
 _searcher(searcher)
 {
 	for (int i = 0; i < MAX_CONN; ++i) {

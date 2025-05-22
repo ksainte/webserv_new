@@ -1,6 +1,7 @@
 #ifndef SEARCHER_HPP
 # define SEARCHER_HPP
 #include <functional>
+#include <list>
 #include "../inc/types/ConfigType.hpp"
 #include "../inc/Config.hpp"
 

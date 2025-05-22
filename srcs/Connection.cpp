@@ -103,13 +103,12 @@ bool Connection::sendResponse() const
 			send_to_cgi(absPath);
 		else
 			absPath.append((_path.substr(strlen(route))));
-		
+
 		stat(absPath.c_str(), &stats);
 		
 		if (!access(absPath.c_str(), F_OK))
 			if (!S_ISDIR(stats.st_mode))
 				send_to_cgi(absPath.c_str());
-
 		
 	}
 
@@ -204,7 +203,6 @@ bool	Connection::setHeaders()
 	return true;
 }
 
-
 int Connection::send_to_cgi(const std::string& absPath) const
 {
   close(1);
@@ -217,7 +215,7 @@ int Connection::send_to_cgi(const std::string& absPath) const
 
   result = execv("./cgi-bin/GET.cgi", arr);
 
-  if (result < 0) 
+  if (result < 0)
   {
     std::cout << "result false\n";
   }
