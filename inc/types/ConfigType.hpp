@@ -1,5 +1,6 @@
 #ifndef CONFIG_TYPE_HPP
 # define CONFIG_TYPE_HPP
+#include <list>
 #include <vector>
 #include <string>
 #include <map>
@@ -9,6 +10,10 @@ class ServerBlock;
 class ConfigType {
 	public:
 		typedef std::vector<std::string> 					Result;
+
+		typedef std::list<std::pair<std::string, std::string> > CgiParams;
+
+		typedef std::list<std::pair<std::string, std::string> >::const_iterator CgiParamsIt;
 
 		typedef std::vector<ServerBlock> 					ServerBlocks;
 		typedef std::vector<ServerBlock>::const_iterator 	ServerBlockIt;

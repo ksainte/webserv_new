@@ -4,11 +4,32 @@
 
 const ConfigType::DirectiveMap&	ADirective::getDirectives() const {return _directives;}
 
+ADirective::ADirective(const ADirective& other):
+_directives(other.getDirectives()),
+_cgiParams(other.getCgiParams())
+{LOG_DEBUG << "ADirective copied\n";}
+
+ADirective& ADirective::operator=(const ADirective& other) {
+	if (this == &other)
+		return *this;
+	_directives = other.getDirectives();
+	_cgiParams = other.getCgiParams();
+	return *this;
+}
+
 ADirective::ADirective(): ToJson()
 {LOG_DEBUG << "ADirective created";}
 
 ADirective::~ADirective()
 {LOG_DEBUG << "ADirective destroyed";}
+
+void	ADirective::addCgiParams(std::string first, std::string last) {
+	(void)last;
+	_cgiParams.push_back(std::make_pair(first, last));
+}
+
+const ConfigType::CgiParams& ADirective::getCgiParams() const
+{return _cgiParams;}
 
 /**
  * @brief (C++98) Serializes the stored directives into a JSON string fragment.

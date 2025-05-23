@@ -94,6 +94,7 @@ class AConfig : public ConfigType
 				int blockType, const std::string& prefix) {
 
 		assert(_serverBlocks.size() > 0 && "size must not be 0");
+
 		switch(blockType) {
 			case 1:
 				// Add directive directly to the last server block
@@ -101,6 +102,20 @@ class AConfig : public ConfigType
 				.addDirective(it, last);
 				break;
 			case 2:
+				// Quick fix to store cgi_params since this directive isnt
+				// unique and cant be store inside the directive map
+				if ((*it).value == "cgi_params")
+				{
+					IteratorType varName = it;
+					IteratorType varVal = it;
+					std::advance(varName, 1);
+					std::advance(varVal, 2);
+
+					_serverBlocks[_serverBlocks.size() - 1]
+					.search(prefix)->
+					addCgiParams((*varName).value, (*varVal).value);
+					break;
+				}
 				// Add directive to a location sub-block in the last server block
 				_serverBlocks[_serverBlocks.size() - 1]
 				.search(prefix)->addDirective(it, last);

@@ -17,6 +17,8 @@
 class ADirective: public virtual ToJson, public virtual ConfigType {
 	protected:
 		ADirective();
+		ADirective(const ADirective& other);
+		ADirective& operator=(const ADirective& other);
 		virtual	~ADirective() = 0;
 	public:
 
@@ -62,9 +64,13 @@ class ADirective: public virtual ToJson, public virtual ConfigType {
 		_directives[(*first).value] = directiveValues;
 	}
 
+	const CgiParams& getCgiParams() const;
+	void	addCgiParams(std::string first, std::string last);
+
 		virtual const DirectiveMap&	getDirectives() const;
 		std::string	toJson(int indentLevel) const;
 	private:
 		DirectiveMap	_directives;
+		CgiParams			_cgiParams;
 };
 #endif
