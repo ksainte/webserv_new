@@ -12,7 +12,6 @@ CC       := c++
 CFLAGS   := -Wall \
             -Wextra \
             -Werror \
-            -O2 \
             -g \
             -std=c++98 \
             -I$(INCLUDE)

@@ -22,7 +22,7 @@ std::string	AConfig::toJson(int indentLevel) const {
 	std::stringstream ss;
 
 	for (ServerBlocks::const_iterator it = _serverBlocks.begin(); it != _serverBlocks.end(); ++it) {
-		ss << "\"server\" " << (*it).toJson(indentLevel);
+		ss << (*it).toJson(indentLevel);
 		if (static_cast<unsigned int>(it - _serverBlocks.begin()) < _serverBlocks.size() - 1) 
 			ss << ',';
 		ss << '\n';

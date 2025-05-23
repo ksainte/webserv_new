@@ -22,7 +22,7 @@ int main() {
 	signal(SIGINT, signalHander);
 	try {
 
-		Tokenizer tokenizer("configFile/single-server.config");
+		Tokenizer tokenizer("configFile/cgi.config");
 		Config config(tokenizer.ft_get_token_list());
 		Searcher searcher(config);
 		EventManager eventManager;
