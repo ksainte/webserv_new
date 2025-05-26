@@ -66,16 +66,7 @@ int Connection::handleEvent(const Event* p, const int flags)
   if (flags & EPOLLOUT)
   {
     _manager->unregisterEvent(p->getFd());
-
-    int pid = fork();
-    //child
-    if (pid == 0)
-    {
-      sendResponse();
-      exit(1);
-    }
-
-    close(p->getFd());
+    sendResponse();
   }
   return 0;
 }
@@ -111,15 +102,23 @@ bool Connection::sendResponse() const
   if (!access(absPath.c_str(), F_OK))
   {
     if (!S_ISDIR(stats.st_mode))
+    {
       send_to_cgi(absPath);
+      return true;
+    }
     else
       absPath.append(_path.substr(strlen(prefix.c_str())));
 
     stat(absPath.c_str(), &stats);
 
     if (!access(absPath.c_str(), F_OK))
+    {
       if (!S_ISDIR(stats.st_mode))
+      {
         send_to_cgi(absPath.c_str());
+        return true;
+      }
+    }
 
     p = _searcher->findLocationDirective(_sockFd, "index", host, prefix.c_str());
     if (p)
@@ -134,7 +133,10 @@ bool Connection::sendResponse() const
 
         if (!access(absPath.c_str(), F_OK)
           && !S_ISDIR(stats.st_mode))
+        {
           send_to_cgi(tmp);
+          return true;
+        }
       }
     }
   }
@@ -191,12 +193,20 @@ bool Connection::setHeaders()
 
 int Connection::send_to_cgi(const std::string& absPath) const
 {
-  close(1);
-  dup2(_clientFd, 1);
-
   char* arr[2] = {const_cast<char*>(absPath.c_str()), NULL};
 
   setenv("QUERY_STRING", absPath.c_str(), 1);
+
+  const int pid = fork();
+
+  if (pid != 0)
+  {
+    close(_clientFd);
+    return 0;
+  }
+
+  close(1);
+  dup2(_clientFd, 1);
 
   const int result = execv("./cgi-bin/GET.cgi", arr);
 

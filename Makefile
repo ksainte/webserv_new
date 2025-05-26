@@ -13,7 +13,6 @@ CFLAGS   := -Wall \
             -Wextra \
             -Werror \
             -g \
-						-fsanitize=address \
             -std=c++98 \
             -I$(INCLUDE)
 
