@@ -22,7 +22,7 @@ int main()
   signal(SIGINT, signalHandler);
   try
   {
-    const Tokenizer tokenizer("configFile/cgi.config");
+    const Tokenizer tokenizer("configFile/single-server.config");
     const Config config(tokenizer.ft_get_token_list());
     Searcher searcher(config);
     EventManager eventManager;

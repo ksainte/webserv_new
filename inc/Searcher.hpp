@@ -25,30 +25,25 @@ class Searcher
 
   const Config& _config;
 
-  static bool isServerNameSet(const ConfigType::DirectiveMap& directives,
-                              const char* hostname);
+  static bool findHost(const ConfigType::DirectiveMap& directives,
+                              const std::string& host);
 
-  void iterateThroughServerBlock(const ConfigType::ServerBlockIt& first,
-                                 const ConfigType::ServerBlockIt& last);
-
-  const ServerBlock& _getDefaultServer(int sockFd, const char* hostname) const;
+  const ServerBlock& _getDefaultServer(int sockFd, const std::string& host) const;
 
   std::list<std::pair<int, int> > _addresses;
-
-  void _storeAddress(int address, int port);
 
 public:
   explicit Searcher(const Config&);
 
-  const char* getLocationPrefix(int sockFd, const char* host, const char* url) const;
+  const LocationBlock* getLocation(int sockFd, const std::string& host, const char* url) const;
 
   const std::list<std::pair<int, int> >& getAddresses() const;
 
   const ConfigType::DirectiveValue* findServerDirective(int sockFd,
-                                                        const std::string& key, const char* host) const;
+                                                        const std::string& key, const std::string& host) const;
 
   const ConfigType::DirectiveValue* findLocationDirective(int sockFd,
-                                                          const std::string& key, const char* hostname,
-                                                          const char* route) const;
+                                                          const std::string& key,
+                                                          const std::string& host, const char* route) const;
 };
 #endif
