@@ -2,6 +2,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "../../inc/types/TokenType.hpp"
+
 int Tokenizer::printError(int err)
 {
     if (err == INPUT)
@@ -59,42 +61,42 @@ std::string	ft_get_value(std::string s1)
     return(s1);
 }
 
-t_type	ft_get_type_token(std::string s1)
+Token::TokenType	ft_get_type_token(std::string s1)
 {
 	if (s1[0] == '{')
-		return (LBRACE);
+		return (Token::LBRACE);
     if (s1[0] == '}')
-		return (RBRACE);
+		return (Token::RBRACE);
     if (s1[0] == ';')
-		return (SEMICOLON);
+		return (Token::SEMICOLON);
     if (s1.compare("location") == 0)
-		return (LOCATION);
+		return (Token::LOCATION);
     if (s1.compare("server") == 0)
-		return (SERVER);
-	return (STRING);
+		return (Token::SERVER);
+	return (Token::STRING);
 }
 
 void Tokenizer::ft_push_token(std::string s1)
 {
-    t_type type;
+    Token::TokenType type;
     std::string value;
-    std::list<t_node>::iterator it;
+    std::list<Token>::iterator it;
 
     value = ft_get_value(s1);
     _len = value.length();
     type = ft_get_type_token(value);
-    _tokens_list.push_back(t_node(type, value));
+    _tokens_list.push_back(Token(type, value));
 }
 
-int ft_check_brackets(t_type type, int &left_brackets)
+int ft_check_brackets(Token::TokenType type, int &left_brackets)
 {       
-    if (type == LBRACE)
+    if (type == Token::LBRACE)
     {
         left_brackets++;
         if (left_brackets > 2)
             return (0);
     }
-    if (type == RBRACE)
+    if (type == Token::RBRACE)
     {
         left_brackets--;
         if (left_brackets < 0)
@@ -103,11 +105,11 @@ int ft_check_brackets(t_type type, int &left_brackets)
     return (1);
 }
 
-int Tokenizer::ft_check_basic_syntax(void)
+int Tokenizer::ft_check_basic_syntax()
 {
-    std::list<t_node>::iterator it;
-    t_type t1;
-    t_type t2;
+    std::list<Token>::iterator it;
+    Token::TokenType t1;
+    Token::TokenType t2;
     int left_brackets;
 
     left_brackets = 0;
@@ -118,19 +120,19 @@ int Tokenizer::ft_check_basic_syntax(void)
         std::cout << "type is " << (*it).type;
         std::cout << "\nvalue is " << (*it).value;
         t2 = (*it).type;
-        if (t2 == LBRACE && !(ft_check_brackets(t2, left_brackets)))
+        if (t2 == Token::LBRACE && !(ft_check_brackets(t2, left_brackets)))
             return (printError(BRACKETS));
-        if (t2 == RBRACE && !(ft_check_brackets(t2, left_brackets)))
+        if (t2 == Token::RBRACE && !(ft_check_brackets(t2, left_brackets)))
             return (printError(BRACKETS));
         if (it != _tokens_list.begin())
         {
-            it--;
+            --it;
             std::cout << "\nThe previous element is " << (*it).type << '\n';
             t1 = (*it).type;
-            it++;
-            if (t1 == t2 && t1 == SEMICOLON)
+            ++it;
+            if (t1 == t2 && t1 == Token::SEMICOLON)
                 return (printError(BAD_SEMICOLONS));
-            if ((t1 == SEMICOLON && t2 == LBRACE) || ((t1 == RBRACE || t1 == LBRACE) && t2 == SEMICOLON))
+            if ((t1 == Token::SEMICOLON && t2 == Token::LBRACE) || ((t1 == Token::RBRACE || t1 == Token::LBRACE) && t2 == Token::SEMICOLON))
                 return (printError(BAD_SEMICOLONS));
         }
         std::cout << "\nnext token:\n";
@@ -140,7 +142,7 @@ int Tokenizer::ft_check_basic_syntax(void)
     std::cout << "----------------";
     if (left_brackets == 0)
         return (1);
-    return (printError(LBRACE));
+    return (printError(Token::LBRACE));
 }
 
 int Tokenizer::ft_tokenize(const std::string s1)
@@ -168,7 +170,7 @@ int Tokenizer::ft_tokenize(const std::string s1)
     return (1);
 }
 
-int Tokenizer::ft_compare_with_table(std::string value, std::list<t_node>::iterator &it, int flag_location_block)
+int Tokenizer::ft_compare_with_table(std::string value, std::list<Token>::iterator &it, int flag_location_block)
 {
     const std::string server_block[10] = {"listen", "host", "port", "server_name", "error_page", "client_max_body_size", "return", "root", "index", "autoindex"};
     const std::string location_block[9] = {"error_page", "client_max_body_size", "method", "return", "root", "index", "autoindex", "cgi_pass", "cgi_params"};
@@ -182,7 +184,7 @@ int Tokenizer::ft_compare_with_table(std::string value, std::list<t_node>::itera
             if (value == server_block[i])
             {
                 std::cout << "Matched directive in server block!\n";
-                (*it).type = DIRECTIVE;
+                (*it).type = Token::DIRECTIVE;
                 std::cout << "New type is " << (*it).type << "\n";
                 return (1);
             }
@@ -196,7 +198,7 @@ int Tokenizer::ft_compare_with_table(std::string value, std::list<t_node>::itera
             if (value == location_block[i])
             {
                 std::cout << "Matched directive in location block!\n";
-                (*it).type = DIRECTIVE;
+                (*it).type = Token::DIRECTIVE;
                 std::cout << "New type is " << (*it).type << "\n";
                 return (1);
             }
@@ -210,7 +212,7 @@ int Tokenizer::ft_compare_with_table(std::string value, std::list<t_node>::itera
     return (0);
 }
 
-int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, std::string t1_value)
+int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, std::string t1_value)
 {
     const std::string one_string[7] = {"listen", "host", "port", "client_max_body_size", "root", "autoindex", "cgi_pass"};
     const std::string two_strings[1] = {"cgi_params"};
@@ -230,9 +232,9 @@ int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, 
     {
         if (t1_value == one_string[i])
         {
-            while ((*it).type != SEMICOLON)
+            while ((*it).type != Token::SEMICOLON)
             {
-                if ((*it).type == STRING)
+                if ((*it).type == Token::STRING)
                 {
                     string_number++;
                 }//pas oublier que avec ca server et location passe pas!
@@ -251,9 +253,9 @@ int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, 
     {
         if (t1_value == two_strings[i])
         {
-            while ((*it).type != SEMICOLON)
+            while ((*it).type != Token::SEMICOLON)
             {
-                if ((*it).type == STRING)
+                if ((*it).type == Token::STRING)
                 {
                     string_number++;
                 }
@@ -269,7 +271,7 @@ int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, 
     }
     if (t1_value == "method")
     {
-        while ((*it).type != SEMICOLON)
+        while ((*it).type != Token::SEMICOLON)
         {
             if ((*it).value == "GET")
                 get_flag += 1;
@@ -287,9 +289,9 @@ int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, 
             return (printError(DBL_METHOD));
         return (1);
     }
-    while ((*it).type != SEMICOLON)
+    while ((*it).type != Token::SEMICOLON)
     {
-        if ((*it).type == STRING)
+        if ((*it).type == Token::STRING)
         {
             string_number++;
         }
@@ -303,15 +305,15 @@ int Tokenizer::ft_valid_values_after_directive(std::list<t_node>::iterator &it, 
 }
 
 
-int Tokenizer::ft_is_location_valid(std::list<t_node>::iterator it)
+int Tokenizer::ft_is_location_valid(std::list<Token>::iterator it)
 {
     int string_number;
 
     //it est sur location mtn
     string_number = 0;
-    while ((*it).type != LBRACE)
+    while ((*it).type != Token::LBRACE)
     {            
-        if ((*it).type == STRING)
+        if ((*it).type == Token::STRING)
         {
             string_number++;
         }//pas oublier que avec ca server et location passe pas!
@@ -326,13 +328,13 @@ int Tokenizer::ft_is_location_valid(std::list<t_node>::iterator it)
 
 
 //compare les strings qui sont que apres un SC, LB ou RB!
-int Tokenizer::ft_check_directives(std::list<t_node>::iterator &it)
+int Tokenizer::ft_check_directives(std::list<Token>::iterator &it)
 {
     int flag_location_block;
     int flag_start_location_block;
     int flag_valid_server_block;
-    t_type t1;
-    t_type t2;
+    Token::TokenType t1;
+    Token::TokenType t2;
     std::string t1_value;
     std::string t2_value;
 
@@ -341,10 +343,10 @@ int Tokenizer::ft_check_directives(std::list<t_node>::iterator &it)
     flag_valid_server_block = 0;
     if (it != _tokens_list.end())
     {
-        if ((*it).type != SERVER)
+        if ((*it).type != Token::SERVER)
             return (printError(NOT_SERVER));
         it++;
-        if (it == _tokens_list.end() || (*it).type != LBRACE)
+        if (it == _tokens_list.end() || (*it).type != Token::LBRACE)
             return (printError(ORDER));
         it++;
     }
@@ -358,19 +360,19 @@ int Tokenizer::ft_check_directives(std::list<t_node>::iterator &it)
         t1 = (*it).type;//previous token
         t1_value = (*it).value;
         it++;//current
-        if (t1 == DIRECTIVE)//we know its a string after a directive, but how many?
+        if (t1 == Token::DIRECTIVE)//we know its a string after a directive, but how many?
         {
             if (!(ft_valid_values_after_directive(it, t1_value)))
                 return (0);
         }
-        if (t2 == STRING && (t1 == SEMICOLON || t1 == LBRACE || t1 == RBRACE))//make a current string a directive
+        if (t2 == Token::STRING && (t1 == Token::SEMICOLON || t1 == Token::LBRACE || t1 == Token::RBRACE))//make a current string a directive
         {
             if (!(ft_compare_with_table((*it).value, it, flag_location_block)))
                 return (printError(BAD_DIRECTIVE));
             if ((*it).value == "listen")
                 flag_valid_server_block = 1;
         }
-        if (t1 == LOCATION)//peux pas skip l interieur de location
+        if (t1 == Token::LOCATION)//peux pas skip l interieur de location
         {
             if (!(ft_is_location_valid(it)))
                 return (0);
@@ -380,14 +382,14 @@ int Tokenizer::ft_check_directives(std::list<t_node>::iterator &it)
             (*it).value = t2_value;
             std::cout << "Previous Type :" << (*it).type << " has New Value :" << (*it).value << "\n";
             it++;//back on the string
-            (*it).type = INVALID;//make this string invalid! for later iteration!
+            (*it).type = Token::INVALID;//make this string invalid! for later iteration!
             flag_location_block = 1;
         }
-        if (flag_location_block == 1 && t2 == LBRACE)
+        if (flag_location_block == 1 && t2 == Token::LBRACE)
             flag_start_location_block = 1;        
-        if (flag_start_location_block == 1 && t2 == RBRACE)
+        if (flag_start_location_block == 1 && t2 == Token::RBRACE)
             flag_location_block = 0;
-        else if (flag_location_block == 0 && t2 == RBRACE)//end of first server block
+        else if (flag_location_block == 0 && t2 == Token::RBRACE)//end of first server block
         {
             if (!(flag_valid_server_block))
                 return (printError(NO_LISTEN));
@@ -402,9 +404,9 @@ int Tokenizer::ft_check_directives(std::list<t_node>::iterator &it)
     return (1);
 }
 
-int Tokenizer::ft_check_server_blocks(void)
+int Tokenizer::ft_check_server_blocks()
 {
-    std::list<t_node>::iterator it;
+    std::list<Token>::iterator it;
 
     it = _tokens_list.begin();
     if (!(ft_check_directives(it)))
@@ -412,7 +414,7 @@ int Tokenizer::ft_check_server_blocks(void)
     return (1);
 }
 
-const std::list<t_node> &Tokenizer::ft_get_token_list(void) const
+const std::list<Token> &Tokenizer::ft_get_token_list() const
 {
     return (_tokens_list);
 }

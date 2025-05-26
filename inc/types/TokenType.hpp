@@ -14,9 +14,12 @@ struct Token {
 		ERROR,
 		SINGLE_QUOTE,
 		NUMBER,
-		END
+		END,
+		INVALID
 	};
 	TokenType					type;
 	std::string					value;
+	Token(): type(INVALID) {};
+	Token(TokenType type, std::string value): type(type), value(value) {};
 };
 #endif

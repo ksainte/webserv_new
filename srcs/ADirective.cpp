@@ -1,35 +1,112 @@
 #include "../inc/ADirective.hpp"
-#include "../inc/Logger.hpp"
 #include <sstream>
+#include "../inc/Logger.hpp"
 
-const ConfigType::DirectiveMap&	ADirective::getDirectives() const {return _directives;}
+const ConfigType::DirectiveMap& ADirective::getDirectives() const { return _directives; }
 
 ADirective::ADirective(const ADirective& other):
-_directives(other.getDirectives()),
-_cgiParams(other.getCgiParams())
-{LOG_DEBUG << "ADirective copied\n";}
+  _directives(other.getDirectives()),
+  _cgiParams(other.getCgiParams())
+{
+  LOG_DEBUG << "ADirective copied\n";
+}
 
-ADirective& ADirective::operator=(const ADirective& other) {
-	if (this == &other)
-		return *this;
-	_directives = other.getDirectives();
-	_cgiParams = other.getCgiParams();
-	return *this;
+ADirective& ADirective::operator=(const ADirective& other)
+{
+  if (this == &other)
+    return *this;
+  _directives = other.getDirectives();
+  _cgiParams = other.getCgiParams();
+  return *this;
 }
 
 ADirective::ADirective(): ToJson()
-{LOG_DEBUG << "ADirective created";}
+{
+  LOG_DEBUG << "ADirective created";
+}
 
 ADirective::~ADirective()
-{LOG_DEBUG << "ADirective destroyed";}
+{
+  LOG_DEBUG << "ADirective destroyed";
+}
 
-void	ADirective::addCgiParams(std::string first, std::string last) {
-	(void)last;
-	_cgiParams.push_back(std::make_pair(first, last));
+void ADirective::addCgiParams(std::string first, std::string last)
+{
+  (void)last;
+  _cgiParams.push_back(std::make_pair(first, last));
 }
 
 const ConfigType::CgiParams& ADirective::getCgiParams() const
-{return _cgiParams;}
+{
+  return _cgiParams;
+}
+
+std::string ADirective::toJson(int indentLevel) const
+{
+  std::stringstream ss;
+  std::string ind = indent(indentLevel);
+
+  bool firstElement = true; // Flag to manage leading commas
+
+  // 1. Iterate through the map of directives (_directives)
+  for (DirectiveMap::const_iterator it = _directives.begin(); it != _directives.end(); ++it)
+  {
+    if (!firstElement)
+    {
+      ss << ",\n";
+    }
+    ss << ind << "\"" << it->first << "\": [";
+
+    bool firstValue = true;
+    DirectiveValueIt valIt = it->second.begin();
+    DirectiveValueIt valEnd = it->second.end();
+
+    for (; valIt != valEnd; ++valIt)
+    {
+      if (!firstValue)
+      {
+        ss << ", ";
+      }
+      ss << "\"" << *valIt << "\""; // NOTE: No escaping applied
+      firstValue = false;
+    }
+    ss << "]";
+    firstElement = false;
+  }
+
+  // 2. Add the cgi_params list if it's not empty
+  if (!_cgiParams.empty())
+  {
+    // Add comma separator if directives were present
+    if (!firstElement)
+    {
+      ss << ",\n";
+    }
+
+    // Output key ("cgi_params") and start of the value array
+    ss << ind << "\"cgi_params\": [";
+
+    bool firstPair = true; // Flag for commas within cgi_params array
+    // Iterate through the list of cgi_params pairs
+    for (CgiParamsIt cgiIt = _cgiParams.begin(); cgiIt != _cgiParams.end(); ++cgiIt)
+    {
+      if (!firstPair)
+      {
+        ss << ", ";
+      }
+      // Output each pair as a [key, value] JSON array
+      // NOTE: No escaping applied to key or value strings
+      ss << "[\"" << cgiIt->first << "\", \"" << cgiIt->second << "\"]";
+      firstPair = false;
+    }
+    // Close the value array
+    ss << "]";
+    firstElement = false; // Mark that an element has been processed
+  }
+
+  // Return the accumulated JSON string fragment
+  return ss.str();
+}
 
 /**
  * @brief (C++98) Serializes the stored directives into a JSON string fragment.
@@ -41,42 +118,46 @@ const ConfigType::CgiParams& ADirective::getCgiParams() const
  * @note Does NOT add enclosing curly braces `{}` for a complete JSON object.
  * @note Does NOT escape special characters within keys or values (potential for invalid JSON).
  */
- std::string ADirective::toJson(int indentLevel) const {
-
-    // Use stringstream for efficient string building in C++98
-    std::stringstream ss;
-    // Assume indent() provides appropriate indentation string (e.g., spaces)
-    std::string ind = indent(indentLevel);
-
-    bool firstDirective = true; // Flag to manage leading commas between directives
-
-    // Iterate through the map of directives (_directives)
-    for (DirectiveMap::const_iterator it = _directives.begin(); it != _directives.end(); ++it) {
-        // Add comma separator before subsequent directives
-        if (!firstDirective) {
-            ss << ",\n";
-        }
-        // Output key (in quotes) and start of the value array
-        ss << ind << "\"" << it->first << "\": [";
-
-        bool firstValue = true; // Flag to manage leading commas within the value array
-        // Iterate through the vector of values for the current directive
-        DirectiveValueIt valIt = it->second.begin();
-        DirectiveValueIt valEnd = it->second.end();
-
-        for (; valIt != valEnd; ++valIt) {
-            // Add comma separator before subsequent values
-            if (!firstValue) {
-                ss << ", ";
-            }
-            // Output value string in quotes (NOTE: No escaping applied)
-            ss << "\"" << *valIt << "\"";
-            firstValue = false;
-        }
-        // Close the value array
-        ss << "]";
-        firstDirective = false; // Mark that the first directive has been processed
-    }
-    // Return the accumulated JSON string fragment
-    return ss.str();
-}
+// std::string ADirective::toJson(int indentLevel) const
+// {
+//   // Use stringstream for efficient string building in C++98
+//   std::stringstream ss;
+//   // Assume indent() provides appropriate indentation string (e.g., spaces)
+//   std::string ind = indent(indentLevel);
+//
+//   bool firstDirective = true; // Flag to manage leading commas between directives
+//
+//   // Iterate through the map of directives (_directives)
+//   for (DirectiveMap::const_iterator it = _directives.begin(); it != _directives.end(); ++it)
+//   {
+//     // Add comma separator before subsequent directives
+//     if (!firstDirective)
+//     {
+//       ss << ",\n";
+//     }
+//     // Output key (in quotes) and start of the value array
+//     ss << ind << "\"" << it->first << "\": [";
+//
+//     bool firstValue = true; // Flag to manage leading commas within the value array
+//     // Iterate through the vector of values for the current directive
+//     DirectiveValueIt valIt = it->second.begin();
+//     DirectiveValueIt valEnd = it->second.end();
+//
+//     for (; valIt != valEnd; ++valIt)
+//     {
+//       // Add comma separator before subsequent values
+//       if (!firstValue)
+//       {
+//         ss << ", ";
+//       }
+//       // Output value string in quotes (NOTE: No escaping applied)
+//       ss << "\"" << *valIt << "\"";
+//       firstValue = false;
+//     }
+//     // Close the value array
+//     ss << "]";
+//     firstDirective = false; // Mark that the first directive has been processed
+//   }
+//   // Return the accumulated JSON string fragment
+//   return ss.str();
+// }

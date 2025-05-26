@@ -1,29 +1,27 @@
 #ifndef EVENTMANAGER_HPP
 #define EVENTMANAGER_HPP
-#include "Event.hpp"
-#include <stdint.h>
 #include <sys/epoll.h>
+#include "Event.hpp"
+
 class EventManager
 {
-	public:
+public:
+  EventManager();
+  ~EventManager();
 
-	EventManager();
-	~EventManager();
+  int registerEvent(int eventFlags, Event* ptr) const;
+  int modifyEvent(int eventFlags, Event* ptr) const;
+  int unregisterEvent(int fd) const;
 
-	int	registerEvent(int eventFlags, Event* ptr) const;
-	int	modifyEvent(int eventFlags, Event* ptr) const;
-	int	unregisterEvent(int fd) const;
+  void run();
 
-	void	run();
+  int getEpfd() const;
+  int getSize() const;
+  const  epoll_event* getEvents() const;
 
-	int getEpfd() const;
-	int getSize() const;
-	const struct epoll_event* getEvents() const;
-
-	protected:
-
-	int _epfd;
-	static const int _SIZE = 1024;
-	struct epoll_event _events[_SIZE];
+protected:
+  int _epfd;
+  static const int SIZE = 1024;
+  struct epoll_event _events[SIZE];
 };
 #endif

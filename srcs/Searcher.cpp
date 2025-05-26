@@ -13,17 +13,13 @@ bool Searcher::isServerNameSet(const ConfigType::DirectiveMap& directives, const
 		ConfigType::DirectiveMapIt it;
 		it = directives.find(std::string("server_name"));
 
-		if (it == directives.end())
-			return false;
+		if (it == directives.end()) return false;
 
 		// Search for hostname 
-		ConfigType::DirectiveValueIt it2 = std::find(it->second.begin(), it->second.end(), 
-				std::string(hostname));
-		if (it2 == it->second.end())
-		{
-			LOG_INFO << ErrorMessages::HOST_NAME_NOT_FOUND;
-			return false;
-		}
+		ConfigType::DirectiveValueIt it2;
+		it2 = std::find(it->second.begin(), it->second.end(), std::string(hostname));
+
+		if (it2 == it->second.end()) return false;
 
 		LOG_INFO << "Hostname \'" << hostname <<  "\' "
 		<< SuccessMessages::HOST_NAME_FOUND;
@@ -34,7 +30,7 @@ bool Searcher::isServerNameSet(const ConfigType::DirectiveMap& directives, const
 
 const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname) const
 {
-	// Store socket ip:port
+	// Get socket ip:port
 	struct sockaddr_in addr;
 	socklen_t addrLen = sizeof(addr);
 	getsockname(sockFd, (struct sockaddr*)&addr, &addrLen);
@@ -62,6 +58,7 @@ const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname)
 				return *it;
 	}
 
+	LOG_INFO << ErrorMessages::HOST_NAME_NOT_FOUND;
 	return *defaultServer;
 
 }
@@ -69,8 +66,9 @@ const ServerBlock& Searcher::_getDefaultServer(int sockFd, const char* hostname)
 const char* Searcher::getLocationPrefix(int sockFd, const char* host, const char* url) const {
 	const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
 	const LocationBlock* locationBlock = serverBlock.search(url);
-	if (!locationBlock) 
-		return NULL;
+	
+	if (!locationBlock) return NULL;
+	
 	return locationBlock->getPrefix().c_str();
 }
 
@@ -78,6 +76,7 @@ const ConfigType::DirectiveValue* Searcher::findLocationDirective(int sockFd,
 	const std::string& key, const char* host, const char* route) const 
 {
 		// Get the default server for a specific host
+		// or the first server 
 		const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
 
 		// Get route configuration
@@ -139,7 +138,6 @@ void Searcher::_storeAddress(int address, int port) {
 
 const std::list<std::pair<int, int> >& Searcher::getAddresses() const 
 {return _addresses;}
-
 
 Searcher::Searcher(const Config& config) : _config(config)
 {

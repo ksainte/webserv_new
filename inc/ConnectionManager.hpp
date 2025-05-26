@@ -3,22 +3,20 @@
 #include "Connection.hpp"
 class Searcher;
 class EventManager;
+
 class ConnectionManager
 {
-	public:
+public:
+  ConnectionManager(Searcher& searcher, EventManager& eventManager);
+  ~ConnectionManager();
 
-	ConnectionManager(Searcher &searcher, EventManager& eventManager);
-	~ConnectionManager();
+  int initNewConnection(int clientFd, int sockFd);
 
-	int	initNewConnection(int clientFd, int sockFd);
-	
-	private:
-
-	const EventManager&	_eventManager;
-	const Searcher&			_searcher;
-	static const int MAX_CONN = 500;
-	static int _numCon;
-	Connection connection[MAX_CONN];
+private:
+  const EventManager& _eventManager;
+  const Searcher& _searcher;
+  static const int MAX_CONN = 500;
+  static int _numCon;
+  Connection connection[MAX_CONN];
 };
 #endif
-

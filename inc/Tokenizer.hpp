@@ -22,34 +22,35 @@
 #define DBL_METHOD 17
 
 
-typedef enum s_token_type
-{
-	SERVER,
-	LOCATION,
-	DIRECTIVE,
-	LBRACE,
-	STRING,
-	RBRACE,
-	SEMICOLON,
-	QUOTE,
-	ERROR,
-	SINGLE_QUOTE,
-	NUMBER,
-	END,
-	INVALID
-}							t_type;
+// typedef enum s_token_type
+// {
+// 	SERVER,
+// 	LOCATION,
+// 	DIRECTIVE,
+// 	LBRACE,
+// 	STRING,
+// 	RBRACE,
+// 	SEMICOLON,
+// 	QUOTE,
+// 	ERROR,
+// 	SINGLE_QUOTE,
+// 	NUMBER,
+// 	END,
+// 	INVALID
+// }							t_type;
+//
+// typedef struct s_node
+// {
+// 	t_type					type;
+// 	std::string				value;
+// 	s_node(t_type _type, std::string _value):type(_type), value(_value){};
+// }							t_node;
 
-typedef struct s_node
-{
-	t_type					type;
-	std::string				value;
-	s_node(t_type _type, std::string _value):type(_type), value(_value){};
-}							t_node;
+struct Token;
 
 class Tokenizer
 {
-	private:
-		std::list<t_node> _tokens_list;
+		std::list<Token> _tokens_list;
 		int				  _len;
 		int 			  printError(int err);
 
@@ -59,13 +60,13 @@ class Tokenizer
 
 		int ft_tokenize(std::string s1);
 		void ft_push_token(std::string s1);
-		int ft_check_basic_syntax(void);
-		int ft_check_directives(std::list<t_node>::iterator &it);
-		int ft_check_server_blocks(void);
-		int ft_compare_with_table(std::string value, std::list<t_node>::iterator &it, int flag_location_block);
-		int ft_valid_values_after_directive(std::list<t_node>::iterator &it, std::string t1_value);
-		int ft_is_location_valid(std::list<t_node>::iterator it);
-		const std::list<t_node> &ft_get_token_list(void) const;
+		int ft_check_basic_syntax();
+		int ft_check_directives(std::list<Token>::iterator &it);
+		int ft_check_server_blocks();
+		int ft_compare_with_table(std::string value, std::list<Token>::iterator &it, int flag_location_block);
+		int ft_valid_values_after_directive(std::list<Token>::iterator &it, std::string t1_value);
+		int ft_is_location_valid(std::list<Token>::iterator it);
+		const std::list<Token> &ft_get_token_list() const;
 	
 };
 

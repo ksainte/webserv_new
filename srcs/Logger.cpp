@@ -1,4 +1,6 @@
 #include "../inc/Logger.hpp"
+
+#include <ctime>
 #include <vector>
 
 const Logger::LogLevel Logger::CURRENT_LOG_LEVEL = Logger::INFO;

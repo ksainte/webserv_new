@@ -12,7 +12,7 @@
 
 int	EventManager::registerEvent(int eventFlags, Event* ptr) const
 {
-	struct epoll_event event;
+	 epoll_event event = {};
 	event.events = eventFlags;
 	event.data.ptr = static_cast<void *>(ptr);
 
@@ -65,7 +65,7 @@ void	EventManager::run()
 {
 	while (getSigIntFlag() == false)
 	{
-		int numEvent = epoll_wait(_epfd, _events, _SIZE, 0);
+		int numEvent = epoll_wait(_epfd, _events, SIZE, 0);
 	
 		if (numEvent == -1)
 		{
@@ -89,5 +89,5 @@ EventManager::~EventManager()
 }
 
 int EventManager::getEpfd() const {return _epfd;}
-int EventManager::getSize() const {return _SIZE;}
+int EventManager::getSize() const {return SIZE;}
 const struct epoll_event*	EventManager::getEvents() const {return _events;}

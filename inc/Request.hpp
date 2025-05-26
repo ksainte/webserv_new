@@ -7,7 +7,7 @@ class Request
 	public:
 
 	Request();
-	~Request();
+	virtual ~Request();
 	Request(const Request& other);
 	Request& operator=(const Request& other);
 
