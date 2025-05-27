@@ -56,6 +56,7 @@ int Connection::handleEvent(const Event* p, int flags)
 	}
 	else if (flags & EPOLLOUT)
   {
+		std::clog << "\n\nrequest is :\n"<< _rawBytes << "\n";
 		_manager->unregisterEvent(p->getFd());
 		
 		int pid = fork();
