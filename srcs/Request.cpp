@@ -13,23 +13,18 @@ int	Request::read(int fd)
 {
 	size_t max_len = sizeof(_buff2) - _offset;
 	ssize_t bytesRead = recv(fd, _buff2 + _offset, max_len, 0);
-	// _buff[max_len] = '\0';
 
 	memcpy(_buff, _buff2, bytesRead);
-	// memset(_buff2, 0 , _BUFFSIZE);
-
-	// std::clog << bytesRead;
-	std::clog << "\n-----------------------------\n";
-	std::clog << _buff;
-	std::clog << "\n-----------------------------\n";
 
 	if (bytesRead == -1)
 		throw std::runtime_error("Error Reading from Client");
 
 
-
+	//le seul probleme ici c est que si le buffer est tres petit
+	//dans le _rawbyte total il peut y avoir le rnrn, mais dans le current
+	//buff il peut y'avoir que < 4 char come nrn, le strstre trouve pas  et
+	//ca segfault, une solution c est jsp trop!
 	_offset += bytesRead;
-
     if (_offset == sizeof(_buff))
 	{
 		_headersLen += _offset;
@@ -44,9 +39,9 @@ int	Request::read(int fd)
 			if (!needle)
 				std::clog << "needle not found\n";
 			_offsetNewLine = needle - _buff + 4;  // on est sur le newline
-			std::clog << "\nclog is "<< _offsetNewLine;
-			std::clog << "\n body is:\n"<<  _buff + _offsetNewLine;
-			std::clog << "\nbodyfinish--------------------\n";
+			// std::clog << "\nclog is "<< _offsetNewLine;
+			// std::clog << "\n body is:\n"<<  _buff + _offsetNewLine;
+			// std::clog << "\nbodyfinish--------------------\n";
 			memcpy(_buff3, _buff2 + _offsetNewLine, sizeof(_buff) - _offsetNewLine);
 			std::clog << "\n buff3 is:\n"<<  _buff3;
 			return (0);//arrete de lire!
@@ -55,8 +50,6 @@ int	Request::read(int fd)
 		memset(_buff, 0 , _BUFFSIZE);
 		return (1);
     }
-
-
 	_headersLen += _offset;
 	std::cout << "\nHeaders len is "<< _headersLen << "\n";
 	_rawBytes.append(_buff, 0, strlen(_buff));
@@ -64,13 +57,11 @@ int	Request::read(int fd)
 	std::cout << "\npos is " << _pos << "\n";
 	char* needle = strstr(_buff, "\r\n\r\n");//tu vas chercher le premier newline
 	_offsetNewLine = needle - _buff + 4;  // on est sur le newline
-	std::clog << "\nclog is "<< _offsetNewLine;
-	std::clog << "\n body :\n"<<  _buff + _offsetNewLine;
-	std::cout << "\nbodyfinish--------------------\n";
+	// std::clog << "\nclog is "<< _offsetNewLine;
+	// std::clog << "\n body :\n"<<  _buff + _offsetNewLine;
+	// std::cout << "\nbodyfinish--------------------\n";
 	memcpy(_buff3, _buff2 + _offsetNewLine, sizeof(_buff) - _offsetNewLine);
 	std::clog << "\n buff3 is:\n"<<  _buff3;
-
-
 
 	return (0);//fin des headers
 }

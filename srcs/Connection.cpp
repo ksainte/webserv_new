@@ -8,6 +8,8 @@
 #include "../inc/EventManager.hpp"
 #include "../inc/Logger.hpp"
 #include "../inc/Searcher.hpp"
+#include <sys/wait.h>
+
 
 Connection::Connection(): 
 _manager(NULL),
@@ -46,11 +48,32 @@ Connection& Connection::operator=(const Connection& other) {
 
 Connection::~Connection() {LOG_DEBUG << "Connection destroyed\n";}
 
+
+// void Connection::setEnv()
+// {
+// 	std::string line;
+
+// 	line = _headers["content-type"];
+// 	std::string key_1 = "content-type:";
+// 	key_1.append(line);
+// 	std::clog << "\n" << key_1;
+// 	line = _headers["content-length"];
+// 	std::string key_2 = "content-length:";
+// 	key_2.append(line);
+// 	std::clog << "\n" << key_2;
+// 	// size_t pos = line.find(":");
+// 	// if (pos != std::string::npos) {
+// 	// 	std::string key = line.substr(0, pos);
+// 	// 	std::string value = line.substr(pos + 1);
+
+// }
+
 int Connection::handleEvent(const Event* p, int flags) 
 {
 	if ((flags & EPOLLIN) && read(p->getFd()) == 0)
   {
 		setHeaders();
+		// setEnv();
 		_manager->modifyEvent(uint32_t(EPOLLOUT), const_cast<Event*>(p));
 		return 0;
 	}
@@ -58,13 +81,63 @@ int Connection::handleEvent(const Event* p, int flags)
   {
 		std::clog << "\n\nrequest is :\n"<< _rawBytes << "\n";
 		_manager->unregisterEvent(p->getFd());
-		
+
+		std::string line;
+
+		line = _headers["content-type"];
+		std::string key_1 = "content-type=";
+		key_1.append(line);
+		std::clog << "\n" << key_1;
+		const char *ct = key_1.c_str();
+		line = _headers["content-length"];
+		std::string key_2 = "content-length=";
+		key_2.append(line);
+		std::clog << "\n" << key_2;
+		const char *cl = key_2.c_str();
+
+		char *env[] = 
+		{
+			(char*)ct,
+			(char*)cl,
+			NULL
+		};
+
+		int fd[2];
+
+		if (pipe(fd) == -1)
+		{
+			perror("pipe: ");
+			return 1;
+		}
+		if (write(fd[1], &_buff3, sizeof(_buff) - _offsetNewLine) == -1)
+		{
+			perror("write: ");
+			return 1;
+		}
+
+
 		int pid = fork();
-		//child
-		if (pid == 0) {
-			sendResponse();
+
+		if (pid == 0)
+		{
+			dup2(fd[0], STDIN_FILENO);
+			close(fd[1]);
+			dup2(_clientFd, STDOUT_FILENO);
+			execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
+			perror("execve: ");
 			exit(1);
 		}
+	
+		close(fd[0]);
+		close(fd[1]);
+	
+		wait(NULL);
+		// if (pid == 0) 
+		// {
+
+		// 	sendResponse();
+		// 	exit(1);
+		// }
 	
 		close(p->getFd());
 	}	

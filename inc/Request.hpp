@@ -2,7 +2,7 @@
 #define REQUEST_HPP
 #include <string>
 #include <sys/types.h>
-# define _BUFFSIZE 300
+# define _BUFFSIZE 2000
 
 class Request
 {

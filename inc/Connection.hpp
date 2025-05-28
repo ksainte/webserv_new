@@ -36,6 +36,7 @@ class Connection : public virtual IEventHandler, public Request
 	~Connection();
 
 	bool						setHeaders();
+	void 						setEnv();
 	void						fillConnection(int clientFd, int sockFd);
 	int							handleError() {return 1;}
 	int							handleError1() {return 2;}

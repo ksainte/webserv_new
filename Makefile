@@ -9,12 +9,11 @@ SRCS_DIR := srcs
 
 # Compiler and flags
 CC       := c++
-CFLAGS   := -Wall \
+CFLAGS   := -std=c++98 \
+            -Wall \
             -Wextra \
-            -Werror \
             -O2 \
             -g \
-            -std=c++98 \
             -I$(INCLUDE)
 
 # Source files, object files, and dependency files
