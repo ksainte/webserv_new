@@ -2,38 +2,27 @@
 #define LISTENER_HPP
 #include <list>
 #include "ConnectionManager.hpp"
-#include "EventManager.hpp"
+#include "Epoll.hpp"
 #include "IEventHandler.hpp"
-
-typedef struct IpPort
-{
-  const char* ip;
-  unsigned short port;
-
-  IpPort(const char* ip, const unsigned short port)
-    : ip(ip), port(port)
-  {
-  };
-} IpPort;
 
 class Searcher;
 
 class Listener : public virtual IEventHandler
 {
 public:
-  Listener(const std::list<std::pair<int, int> >& addresses, EventManager& eventManager, ConnectionManager& connManager);
+  Listener(const std::list<std::pair<int, int> >& addresses, Epoll& eventManager, ConnectionManager& connManager);
   ~Listener();
+  int handleEvent(const Event* event, unsigned int flags);
+  int handleError();
 
 private:
   static const int SOCK_MAX = 10;
+  static std::list<int> _sockFds;
   Event _events[SOCK_MAX];
   ConnectionManager& _connManager;
-  EventManager& _eventManager;
-  std::list<int> sockfds;
+  Epoll& _eventManager;
 
-  int initSockFd(const std::pair<int, int>& address) const;
-  int iterateThroughIpPortList(const std::list<std::pair<int, int> >& addresses);
-  int handleEvent(const Event* event, int flags);
-  int handleError();
+  static int _initSockFd(const std::pair<int, int>& address);
+  static int _iterateThroughIpPortList(const std::list<std::pair<int, int> >& addresses);
 };
 #endif

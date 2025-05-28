@@ -6,7 +6,7 @@
 #include "../inc/Request.hpp"
 #include "../inc/Searcher.hpp"
 
-class EventManager;
+class Epoll;
 class ConnectionManager;
 
 class Connection : public virtual IEventHandler, public Request
@@ -18,7 +18,7 @@ class Connection : public virtual IEventHandler, public Request
   int send_to_cgi(const std::string& absPath) const;
   int isDirectoryExists(const char* path) const;
 
-  EventManager* _manager;
+  Epoll* _manager;
   Searcher* _searcher;
   int _sockFd;
   int _clientFd;
@@ -27,18 +27,18 @@ class Connection : public virtual IEventHandler, public Request
 
 public:
   Connection();
-  Connection(Searcher& searcher, EventManager& manager);
+  Connection(Searcher& searcher, Epoll& manager);
   Connection(const Connection& other);
   Connection& operator=(const Connection& other);
   ~Connection();
 
   int handleError() { return 1; }
-  int handleEvent(const Event* p, int flags);
+  int handleEvent(const Event* p, unsigned int flags);
 
   int getSockFd() const;
   int getClientFd() const;
   Searcher* getSearcher() const;
-  EventManager* getManager() const;
+  Epoll* getManager() const;
   Event* getEvent();
 
   void setEvent();

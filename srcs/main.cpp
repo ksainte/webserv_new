@@ -25,11 +25,11 @@ int main()
     const Tokenizer tokenizer("configFile/single-server.config");
     const Config config(tokenizer.ft_get_token_list());
     Searcher searcher(config);
-    EventManager eventManager;
+    Epoll eventManager;
     ConnectionManager connManager(searcher, eventManager);
     Listener listener(searcher.getAddresses(), eventManager, connManager);
 
-    eventManager.run();
+    eventManager.wait();
   }
   catch (std::exception& e)
   {

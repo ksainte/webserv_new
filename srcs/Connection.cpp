@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include "../inc/Connection.hpp"
 #include "../inc/Event.hpp"
-#include "../inc/EventManager.hpp"
+#include "../inc/Epoll.hpp"
 #include "../inc/Logger.hpp"
 #include "../inc/Searcher.hpp"
 
@@ -18,7 +18,7 @@ Connection::Connection():
   LOG_DEBUG << "Connection created\n";
 }
 
-Connection::Connection(Searcher& searcher, EventManager& manager):
+Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
   _sockFd(-1),
@@ -55,12 +55,12 @@ Connection::~Connection()
   LOG_DEBUG << "Connection destroyed\n";
 }
 
-int Connection::handleEvent(const Event* p, const int flags)
+int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN && read(p->getFd()) == 0)
   {
     setHeaders();
-    _manager->modifyEvent(uint32_t(EPOLLOUT), const_cast<Event*>(p));
+    _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
     return 0;
   }
   if (flags & EPOLLOUT)
@@ -89,7 +89,7 @@ bool Connection::sendResponse() const
   const std::string prefix(location->getPrefix());
 
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", host, prefix.c_str());
-  if (!p || (*p)[0].empty())
+  if (!p || p[0].empty())
   {
     std::clog << "root is not valid\n";
     return false;
@@ -229,5 +229,5 @@ void Connection::setClientFd(int clientFd) { _clientFd = clientFd; };
 Event* Connection::getEvent() { return &_event; }
 int Connection::getSockFd() const { return _sockFd; }
 int Connection::getClientFd() const { return _clientFd; }
-EventManager* Connection::getManager() const { return _manager; }
+Epoll* Connection::getManager() const { return _manager; }
 Searcher* Connection::getSearcher() const { return _searcher; }

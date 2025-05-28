@@ -1,5 +1,5 @@
 #include "../inc/Logger.hpp"
-#include "../inc/EventManager.hpp"
+#include "../inc/Epoll.hpp"
 #include "../inc/ConnectionManager.hpp"
 #include "../inc/Connection.hpp"
 
@@ -22,7 +22,7 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 	return (0);
 }
 
-ConnectionManager::ConnectionManager(Searcher &searcher, EventManager& eventManager): 
+ConnectionManager::ConnectionManager(Searcher &searcher, Epoll& eventManager): 
 _eventManager(eventManager),
 _searcher(searcher)
 {

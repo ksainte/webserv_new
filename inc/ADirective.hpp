@@ -20,7 +20,7 @@ protected:
   ADirective();
   ADirective(const ADirective& other);
   ADirective& operator=(const ADirective& other);
-  virtual ~ADirective() = 0;
+  ~ADirective() = 0;
 
 public:
   /**
@@ -43,7 +43,7 @@ public:
     if (rangeDistance > 1)
     {
       // Reserve approx space to avoid reallocations (key token isn't stored)
-      directiveValues.reserve(static_cast<typename std::vector<std::string>::size_type>(rangeDistance - 1));
+      directiveValues.reserve(static_cast<std::vector<std::string>::size_type>(rangeDistance - 1));
     }
 
     IteratorType currentTokenIter = first;

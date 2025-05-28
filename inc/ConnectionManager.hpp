@@ -2,18 +2,18 @@
 #define CONNECTIONMANAGER_HPP
 #include "Connection.hpp"
 class Searcher;
-class EventManager;
+class Epoll;
 
 class ConnectionManager
 {
 public:
-  ConnectionManager(Searcher& searcher, EventManager& eventManager);
+  ConnectionManager(Searcher& searcher, Epoll& eventManager);
   ~ConnectionManager();
 
   int initNewConnection(int clientFd, int sockFd);
 
 private:
-  const EventManager& _eventManager;
+  const Epoll& _eventManager;
   const Searcher& _searcher;
   static const int MAX_CONN = 500;
   static int _numCon;
