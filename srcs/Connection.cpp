@@ -68,6 +68,50 @@ Connection::~Connection() {LOG_DEBUG << "Connection destroyed\n";}
 
 // }
 
+
+void Connection::continueReadingBody(int fdWriteSide, int clientSockFd)
+{
+	memset(_buff2, 0 , _BUFFSIZE);
+	_offset = 0;
+	size_t max_len = sizeof(_buff2) - _offset;
+
+	ssize_t bytesRead;
+
+	while (bytesRead = recv(clientSockFd, _buff2 + _offset, max_len, 0))
+	{
+
+		if (bytesRead == -1)
+			throw std::runtime_error("Error Reading from Client");
+
+
+		_offset += bytesRead;
+		if (_offset == sizeof(_buff))
+		{
+			_headersLen += _offset;
+			std::cout << "\nheaders len is "<< _headersLen << "\n";
+			if (write(fdWriteSide, &_buff2, sizeof(_buff2)) == -1)
+			{
+				perror("write: ");
+				return ;
+			}
+			_offset = 0;
+			memset(_buff2, 0 , _BUFFSIZE);
+			continue;
+		}
+		_headersLen += _offset;
+		std::clog << "\nHeaders len is "<< _headersLen << "\n";
+		if (write(fdWriteSide, &_buff2, sizeof(_buff2)) == -1)
+		{
+			perror("write: ");
+			return ;
+		}
+		std::clog << "\n End of Reading!!!!!!\n";
+		return ;
+	}
+}
+
+
+
 int Connection::handleEvent(const Event* p, int flags) 
 {
 	if ((flags & EPOLLIN) && read(p->getFd()) == 0)
@@ -79,7 +123,8 @@ int Connection::handleEvent(const Event* p, int flags)
 	}
 	else if (flags & EPOLLOUT)
   {
-		std::clog << "\n\nrequest is :\n"<< _rawBytes << "\n";
+		// std::clog << "\n\nrequest is :\n"<< _rawBytes << "\n";
+		std::clog << "\nCURRENT METHOD IS :" << _method << "\n";
 		_manager->unregisterEvent(p->getFd());
 
 		std::string line;
@@ -87,57 +132,70 @@ int Connection::handleEvent(const Event* p, int flags)
 		line = _headers["content-type"];
 		std::string key_1 = "content-type=";
 		key_1.append(line);
-		std::clog << "\n" << key_1;
+		// std::clog << "\n" << key_1;
 		const char *ct = key_1.c_str();
 		line = _headers["content-length"];
+		size_t content_length = atoi(line.c_str());
 		std::string key_2 = "content-length=";
 		key_2.append(line);
-		std::clog << "\n" << key_2;
+		// std::clog << "\n" << key_2;
 		const char *cl = key_2.c_str();
 
-		char *env[] = 
+		int pid;
+
+		if (_method == "POST")
 		{
-			(char*)ct,
-			(char*)cl,
-			NULL
-		};
+			char *env[] = 
+			{
+				(char*)ct,
+				(char*)cl,
+				NULL
+			};
 
-		int fd[2];
+			int fd[2];
 
-		if (pipe(fd) == -1)
-		{
-			perror("pipe: ");
-			return 1;
-		}
-		if (write(fd[1], &_buff3, sizeof(_buff) - _offsetNewLine) == -1)
-		{
-			perror("write: ");
-			return 1;
-		}
+			if (pipe(fd) == -1)
+			{
+				perror("pipe: ");
+				return 1;
+			}
+
+			if (write(fd[1], &_buff3, sizeof(_buff) - _offsetNewLine) == -1)
+			{
+				perror("write: ");
+				return 1;
+			}
+			if (_headersLen -_pos - 4 < content_length)
+				continueReadingBody(fd[1], p->getFd());
+			// 	std::cout << "\naaaaaaaaaa\n";
 
 
-		int pid = fork();
+			pid = fork();
 
-		if (pid == 0)
-		{
-			dup2(fd[0], STDIN_FILENO);
+			if (pid == 0)
+			{
+				dup2(fd[0], STDIN_FILENO);
+				close(fd[1]);
+				dup2(_clientFd, STDOUT_FILENO);
+				execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
+				perror("execve: ");
+				exit(1);
+			}
+		
+			close(fd[0]);
 			close(fd[1]);
-			dup2(_clientFd, STDOUT_FILENO);
-			execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
-			perror("execve: ");
-			exit(1);
 		}
-	
-		close(fd[0]);
-		close(fd[1]);
-	
-		wait(NULL);
-		// if (pid == 0) 
-		// {
+		else
+		{
+			pid = fork();
+			// wait(NULL);
+			if (pid == 0) 
+			{
 
-		// 	sendResponse();
-		// 	exit(1);
-		// }
+				sendResponse();
+				exit(1);
+			}
+		}
 	
 		close(p->getFd());
 	}	

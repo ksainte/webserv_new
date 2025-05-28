@@ -2,7 +2,7 @@
 #define REQUEST_HPP
 #include <string>
 #include <sys/types.h>
-# define _BUFFSIZE 2000
+# define _BUFFSIZE 300
 
 class Request
 {
@@ -27,8 +27,8 @@ class Request
 	
 	// static const int _BUFFSIZE = 1000;
 	char 				_buff[_BUFFSIZE];
-	signed char 				_buff2[_BUFFSIZE];
-	signed char 				_buff3[_BUFFSIZE];
+	unsigned char 				_buff2[_BUFFSIZE];
+	unsigned char 				_buff3[_BUFFSIZE];
 	size_t 			_offsetNewLine;
 	off_t 		_offset;
 	size_t 				_headersLen;

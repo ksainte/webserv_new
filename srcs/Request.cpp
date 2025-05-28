@@ -7,8 +7,6 @@
 
 
 
-
-
 int	Request::read(int fd)
 {
 	size_t max_len = sizeof(_buff2) - _offset;
@@ -43,7 +41,7 @@ int	Request::read(int fd)
 			// std::clog << "\n body is:\n"<<  _buff + _offsetNewLine;
 			// std::clog << "\nbodyfinish--------------------\n";
 			memcpy(_buff3, _buff2 + _offsetNewLine, sizeof(_buff) - _offsetNewLine);
-			std::clog << "\n buff3 is:\n"<<  _buff3;
+			// std::clog << "\n buff3 is:\n"<<  _buff3;
 			return (0);//arrete de lire!
 		}
 		memset(_buff2, 0 , _BUFFSIZE);
@@ -61,31 +59,11 @@ int	Request::read(int fd)
 	// std::clog << "\n body :\n"<<  _buff + _offsetNewLine;
 	// std::cout << "\nbodyfinish--------------------\n";
 	memcpy(_buff3, _buff2 + _offsetNewLine, sizeof(_buff) - _offsetNewLine);
-	std::clog << "\n buff3 is:\n"<<  _buff3;
+	// std::clog << "\n buff3 is:\n"<<  _buff3;
 
 	return (0);//fin des headers
 }
 
-
-// long lSize;
-// char * buffer;
-// size_t result;
-
-// fseek (pFile , 0 , SEEK_END);
-// lSize = ftell (pFile);
-// rewind (pFile);
-// printf("\nlSize is : \n%ld", lSize);
-// buffer = (char*)malloc(lSize + 1);
-// result = fread (buffer, 1, lSize, pFile);
-// buffer[lSize + 1] = '\0';
-// printf("\nresult is : \n%ld", result);
-// int i = 0;
-// while(buffer[i])
-// {
-// 	printf("%02x", buffer[i]);
-// 	i++;
-// }
-// printf("\ni is : \n%d", i);
 Request::Request(): _offsetNewLine(0), _offset(0), _headersLen(0), _pos(0)
 {
 	std::memset(_buff, 0, _BUFFSIZE);
@@ -137,3 +115,24 @@ const char*	Request::getBuff() const {return _buff;}
 const std::string& Request::getRawBytes() const {return _rawBytes;}
 
 int	Request::getBuffSize() const {return _BUFFSIZE;}
+
+
+// long lSize;
+// char * buffer;
+// size_t result;
+
+// fseek (pFile , 0 , SEEK_END);
+// lSize = ftell (pFile);
+// rewind (pFile);
+// printf("\nlSize is : \n%ld", lSize);
+// buffer = (char*)malloc(lSize + 1);
+// result = fread (buffer, 1, lSize, pFile);
+// buffer[lSize + 1] = '\0';
+// printf("\nresult is : \n%ld", result);
+// int i = 0;
+// while(buffer[i])
+// {
+// 	printf("%02x", buffer[i]);
+// 	i++;
+// }
+// printf("\ni is : \n%d", i);
