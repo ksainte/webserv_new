@@ -1,6 +1,5 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
-#include <map>
 #include "IEventHandler.hpp"
 #include "../inc/Event.hpp"
 #include "../inc/Request.hpp"
@@ -11,18 +10,13 @@ class ConnectionManager;
 
 class Connection : public virtual IEventHandler, public Request
 {
-  typedef std::map<std::string, std::string> Headers;
-  typedef std::map<std::string, std::string>::const_iterator HeaderIt;
-
   bool sendResponse() const;
   int send_to_cgi(const std::string& absPath) const;
-  int isDirectoryExists(const char* path) const;
 
   Epoll* _manager;
   Searcher* _searcher;
   int _sockFd;
   int _clientFd;
-  Headers _headers;
   Event _event;
 
 public:
@@ -42,11 +36,8 @@ public:
   Event* getEvent();
 
   void setEvent();
-  bool setHeaders();
   void setSockFd(int sockFd);
   void setClientFd(int clientFd);
 
-  const Headers&
-  getHeaders() const;
 };
 #endif

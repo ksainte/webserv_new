@@ -11,7 +11,6 @@ SRCS_DIR := srcs
 CC       := c++
 CFLAGS   := -Wall \
             -Wextra \
-            -Werror \
             -g \
             -std=c++98 \
             -I$(INCLUDE)

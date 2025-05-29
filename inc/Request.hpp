@@ -1,34 +1,48 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 #include <string>
-#include <sys/types.h>
+#include <vector>
+#include <map>
+
 class Request
 {
-	public:
+protected:
 
-	Request();
-	virtual ~Request();
-	Request(const Request& other);
-	Request& operator=(const Request& other);
+  typedef std::map<std::string, std::string> Headers;
+  typedef std::map<std::string, std::string>::const_iterator HeaderIt;
 
-	const std::string&	getMethod()		const;
-	const std::string&	getPath()			const;
-	const std::string&	getVersion()	const;	
-	const std::string&	getRawBytes()	const;
-	off_t 							getOffset() 	const;
-	const char*					getBuff() 		const;
-	int									getBuffSize() const;
+  static bool  isEqual(unsigned char a, unsigned char b);
 
-	int		read(int fd);
+  size_t _offset;
+  std::string _method;
+  std::string _path;
+  std::string _version;
 
-	protected:
-	
-	static const int _BUFFSIZE = 1000;
-	char 				_buff[_BUFFSIZE];
-	off_t 			_offset;
-	std::string _rawBytes;
-	std::string _method;
-	std::string _path;
-	std::string _version;
+  std::vector<unsigned char> _buf;
+  Headers _headers;
+  static const std::string _headersEnd;
+  static const std::string _headerEnd;
+  static const int _buffSize = 1024;
+  static const int _maxHeadersLen = 1024;
+
+public:
+  Request();
+  virtual ~Request();
+  Request(const Request& other);
+  Request& operator=(const Request& other);
+
+  const std::string& getMethod() const;
+  const std::string& getPath() const;
+  const std::string& getVersion() const;
+  const std::vector<unsigned char>& getBuf() const;
+  size_t getOffset() const;
+
+
+  int extractHeaders(int fd);
+  bool storeHeaders();
+
+  const Headers&
+  getHeaders() const;
+
 };
 #endif

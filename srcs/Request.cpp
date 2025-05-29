@@ -3,78 +3,129 @@
 #include <cstring>
 #include <sys/socket.h>
 #include <cstdlib>
-#include <string.h>
 
-int	Request::read(int fd) 
+const std::string Request::_headersEnd("\r\n\r\n");
+const std::string Request::_headerEnd("\r\n");
+
+bool Request::isEqual(const unsigned char a, const unsigned char b)
 {
-	size_t max_len = sizeof(_buff) - _offset;
-	ssize_t bytesRead = recv(fd, _buff + _offset, max_len, 0);
-	_buff[max_len] = '\0';
+  return a == b;
+}
 
-	if (bytesRead == -1)
-		throw std::runtime_error("Error Reading from Client");
-	_offset += bytesRead;
-    if (_offset == sizeof(_buff))
-	{
-		_rawBytes.append(_buff, sizeof(_buff));
-		memset(_buff, 0 , _BUFFSIZE);
-		_offset = 0;
-		size_t pos = _rawBytes.find("\r\n\r\n");
-		if (pos != std::string::npos)
-		{
-			return (0);
-		}
-		return (1);
+bool Request::storeHeaders()
+{
+  std::istringstream iss(std::string(_buf.begin(), _buf.end()));
+  std::string line;
+
+  if (std::getline(iss, line))
+  {
+    std::istringstream lineStream(line);
+    lineStream >> _method >> _path >> _version;
+  }
+
+  while (std::getline(iss, line) && line[0] != '\r')
+  {
+    size_t pos = line.find(':');
+    if (pos != std::string::npos)
+    {
+      std::string key = line.substr(0, pos);
+      std::string value = line.substr(pos + 1);
+
+      // Trim whitespace
+      // Shoudl also trim whitespaces before key and after value
+      key.erase(key.find_last_not_of(' ') + 1);
+      value.erase(0, value.find_first_not_of(' '));
+      value.erase(value.find_last_not_of('\r') + 1);
+
+      // Convert key to lowercase for case-insensitive comparison
+      for (size_t i = 0; i < key.size(); ++i)
+      {
+        key[i] = static_cast<char>(std::tolower(key[i]));
+      }
+      _headers[key] = value;
     }
-	_rawBytes.append(_buff, 0, strlen(_buff));
-	return (0);
+  }
+  return true;
 }
 
-Request::Request(): _offset(0) {
-	std::memset(_buff, 0, _BUFFSIZE);
-	LOG_DEBUG << "Request created";
-}
-
-Request::Request(const Request& other): 
-_offset(other.getOffset()), 
-_rawBytes(other.getRawBytes()),
-_method(other.getMethod()),
-_path(other.getPath()),
-_version(other.getVersion())
+int Request::extractHeaders(const int fd)
 {
+  int flags;
+  ssize_t bytesRead = 0;
+  std::vector<unsigned char>::const_iterator it = _buf.end();
 
-	memcpy(_buff, other.getBuff(), _BUFFSIZE);
-	LOG_DEBUG << "Request copied";
+  // Stop condition may be enhanced
+  for (int i = 0; i * _buffSize <= _maxHeadersLen; ++i)
+  {
+    i % 2 ? flags = 0 : flags = MSG_PEEK;
+
+    if (flags)
+      bytesRead = recv(fd, _buf.data(), _buf.capacity(), flags);
+    else
+      bytesRead = recv(fd, _buf.data(), bytesRead - _offset, flags);
+
+    if (bytesRead == -1)
+      return 1;
+
+    // storeHeaders();
+    if (it == _buf.end())
+      it = std::search(_buf.begin(), _buf.end(),
+        _headersEnd.begin(), _headersEnd.end(), isEqual);
+
+    if (it != _buf.end())
+      _offset = bytesRead - (it - _buf.begin()) + _headersEnd.size();
+  }
+
+  return 0;
 }
 
-Request& Request::operator=(const Request& other) {
-
-	if (this == &other)
-		return *this;
-	
-	_offset = other.getOffset();
-	_rawBytes = other.getRawBytes();
-	_method = other.getMethod();	
-	_path = other.getPath();
-	_version = other.getVersion();
-	memcpy(_buff, other.getBuff(), _BUFFSIZE);
-	
-	LOG_DEBUG << "Request copy assigned";
-	return *this;
+Request::Request(): _offset(0)
+{
+  _buf.resize(_buffSize);
+  LOG_DEBUG << "Request created";
 }
 
-Request::~Request() {LOG_DEBUG << "Request destructed";}
+Request::Request(const Request& other):
+  _offset(other.getOffset()),
+  _method(other.getMethod()),
+  _path(other.getPath()),
+  _version(other.getVersion()),
+  _buf(other.getBuf()),
+  _headers(other.getHeaders())
+{
+  LOG_DEBUG << "Request copied";
+}
 
-off_t Request::getOffset() const {return _offset;}
+Request& Request::operator=(const Request& other)
+{
+  if (this == &other)
+    return *this;
 
-const std::string& Request::getMethod() const {return _method;}
+  _offset = other.getOffset();
+  _method = other.getMethod();
+  _path = other.getPath();
+  _version = other.getVersion();
+  _buf = other.getBuf();
+  _headers = other.getHeaders();
 
-const std::string& Request::getPath() const {return _path;}
+  LOG_DEBUG << "Request copy assigned";
+  return *this;
+}
 
-const std::string& Request::getVersion() const {return _version;}
+Request::~Request()
+{
+  LOG_DEBUG << "Request destructed";
+}
 
-const char*	Request::getBuff() const {return _buff;}
+const std::map<std::string, std::string>&
+Request::getHeaders() const { return _headers; }
 
-const std::string& Request::getRawBytes() const {return _rawBytes;}
+size_t Request::getOffset() const { return _offset; }
 
-int	Request::getBuffSize() const {return _BUFFSIZE;}
+const std::string& Request::getMethod() const { return _method; }
+
+const std::string& Request::getPath() const { return _path; }
+
+const std::string& Request::getVersion() const { return _version; }
+
+const std::vector<unsigned char>& Request::getBuf() const { return _buf; }
