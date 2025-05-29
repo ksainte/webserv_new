@@ -69,7 +69,7 @@ Connection::~Connection() {LOG_DEBUG << "Connection destroyed\n";}
 // }
 
 
-void Connection::continueReadingBody(int fdWriteSide, int clientSockFd)
+void Connection::continueReadingBody(FILE *file, int clientSockFd)
 {
 	memset(_buff2, 0 , _BUFFSIZE);
 	_offset = 0;
@@ -89,22 +89,19 @@ void Connection::continueReadingBody(int fdWriteSide, int clientSockFd)
 		{
 			_headersLen += _offset;
 			std::cout << "\nheaders len is "<< _headersLen << "\n";
-			if (write(fdWriteSide, &_buff2, sizeof(_buff2)) == -1)
-			{
-				perror("write: ");
-				return ;
-			}
+			fwrite(&_buff2, 1, sizeof(_buff2), file);
 			_offset = 0;
 			memset(_buff2, 0 , _BUFFSIZE);
 			continue;
 		}
 		_headersLen += _offset;
 		std::clog << "\nHeaders len is "<< _headersLen << "\n";
-		if (write(fdWriteSide, &_buff2, sizeof(_buff2)) == -1)
-		{
-			perror("write: ");
-			return ;
-		}
+		// if (fwrite(&_buff2, 1, sizeof(_buff2), file) == -1)
+		// {
+		// 	perror("write: ");
+		// 	return ;
+		// }
+		fwrite(&_buff2, 1, sizeof(_buff2), file);
 		std::clog << "\n End of Reading!!!!!!\n";
 		return ;
 	}
@@ -152,38 +149,47 @@ int Connection::handleEvent(const Event* p, int flags)
 				NULL
 			};
 
-			int fd[2];
+			// int fd[2];
 
-			if (pipe(fd) == -1)
-			{
-				perror("pipe: ");
-				return 1;
-			}
+			// if (pipe(fd) == -1)
+			// {
+			// 	perror("pipe: ");
+			// 	return 1;
+			// }
 
-			if (write(fd[1], &_buff3, sizeof(_buff) - _offsetNewLine) == -1)
-			{
-				perror("write: ");
-				return 1;
-			}
+			// if (write(fd[1], &_buff3, sizeof(_buff) - _offsetNewLine) == -1)
+			// {
+			// 	perror("write: ");
+			// 	return 1;
+			// }
+			FILE *file;
+
+			file = fopen("test", "wb");
+			fwrite (&_buff3, 1, sizeof(_buff) - _offsetNewLine, file);
+  
 			if (_headersLen -_pos - 4 < content_length)
-				continueReadingBody(fd[1], p->getFd());
+				continueReadingBody(file , p->getFd());
 			// 	std::cout << "\naaaaaaaaaa\n";
 
+			fflush(file);
+
+			file = fopen("test", "rb");
 
 			pid = fork();
 
 			if (pid == 0)
 			{
-				dup2(fd[0], STDIN_FILENO);
-				close(fd[1]);
+				// dup2(fd[0], STDIN_FILENO);
+				dup2(fileno(file), STDIN_FILENO);
+				// close(fd[1]);
 				dup2(_clientFd, STDOUT_FILENO);
 				execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
 				perror("execve: ");
 				exit(1);
 			}
-		
-			close(fd[0]);
-			close(fd[1]);
+			close(fileno(file));
+			// close(fd[0]);
+			// close(fd[1]);
 			wait(NULL);
 		}
 		else
