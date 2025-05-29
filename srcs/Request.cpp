@@ -50,31 +50,23 @@ bool Request::storeHeaders()
 
 int Request::extractHeaders(const int fd)
 {
-  int flags;
   ssize_t bytesRead = 0;
-  std::vector<unsigned char>::const_iterator it = _buf.end();
 
-  // Stop condition may be enhanced
-  for (int i = 0; i * _buffSize <= _maxHeadersLen; ++i)
-  {
-    i % 2 ? flags = 0 : flags = MSG_PEEK;
+  bytesRead = recv(fd, _buf.data(), _buf.capacity(), MSG_PEEK);
 
-    if (flags)
-      bytesRead = recv(fd, _buf.data(), _buf.capacity(), flags);
-    else
-      bytesRead = recv(fd, _buf.data(), bytesRead - _offset, flags);
+  if (bytesRead == -1) return 1;
 
-    if (bytesRead == -1)
-      return 1;
+  const std::vector<unsigned char>::const_iterator it =
+    std::search(_buf.begin(), _buf.end(),
+      _headersEnd.begin(), _headersEnd.end(), isEqual);
 
-    // storeHeaders();
-    if (it == _buf.end())
-      it = std::search(_buf.begin(), _buf.end(),
-        _headersEnd.begin(), _headersEnd.end(), isEqual);
+  if (it == _buf.end()) return 1;
 
-    if (it != _buf.end())
-      _offset = bytesRead - (it - _buf.begin()) + _headersEnd.size();
-  }
+  _offset = bytesRead - (it - _buf.begin()) + _headersEnd.size();
+
+  bytesRead = recv(fd, _buf.data(), bytesRead - _offset, 0);
+
+  if (bytesRead == -1) return 1;
 
   return 0;
 }

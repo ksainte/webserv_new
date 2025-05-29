@@ -55,22 +55,6 @@ Connection::~Connection()
   LOG_DEBUG << "Connection destroyed\n";
 }
 
-// int Connection::handleEvent(const Event* p, const unsigned int flags)
-// {
-//   if (flags & EPOLLIN && read(p->getFd()) == 0)
-//   {
-//     setHeaders();
-//     _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
-//     return 0;
-//   }
-//   if (flags & EPOLLOUT)
-//   {
-//     _manager->unregisterEvent(p->getFd());
-//     sendResponse();
-//   }
-//   return 0;
-// }
-
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN && extractHeaders(p->getFd()) == 0)
