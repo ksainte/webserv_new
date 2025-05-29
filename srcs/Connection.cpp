@@ -184,11 +184,11 @@ int Connection::handleEvent(const Event* p, int flags)
 		
 			close(fd[0]);
 			close(fd[1]);
+			wait(NULL);
 		}
 		else
 		{
 			pid = fork();
-			// wait(NULL);
 			if (pid == 0) 
 			{
 
