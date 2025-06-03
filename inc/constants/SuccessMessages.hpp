@@ -9,5 +9,6 @@ class SuccessMessages {
 		static const char* S_EPOLL_CTL_MOD;
 		static const char* S_EPOLL_CTL_DEL;
 		static const char* S_MAP_ERASE;
+		static const char* HEADERS_STORED;
 };
 # endif

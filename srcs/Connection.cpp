@@ -4,9 +4,11 @@
 #include <cstring>
 #include <unistd.h>
 #include <cstdlib>
+#include <algorithm>
 #include "../inc/Connection.hpp"
 #include "../inc/Event.hpp"
 #include "../inc/Epoll.hpp"
+#include "../inc/Exception.hpp"
 #include "../inc/Logger.hpp"
 #include "../inc/Searcher.hpp"
 
@@ -57,15 +59,35 @@ Connection::~Connection()
 
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
-  if (flags & EPOLLIN && extractHeaders(p->getFd()) == 0)
+  if (flags & EPOLLIN)
   {
-    storeHeaders();
+    try
+    {
+      extractHeaders(p->getFd());
+      storeHeaders();
+    }
+    catch (Exception& e)
+    {
+      LOG_WARNING << e.what();
+      handleError(e.errnum());
+    }
+
+    const HeaderIt it = _headers.find("host");
+    if (it != _headers.end())
+      _host = it->second;
+
     // setEnv();
     _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
     return 0;
   }
   if (flags & EPOLLOUT)
   {
+    if (!_response.empty())
+    {
+      send(_clientFd, _response.c_str(), _response.size(), 0);
+      return 1;
+    }
+
     _manager->unregisterEvent(p->getFd());
 
     std::string line;
@@ -224,6 +246,116 @@ int Connection::send_to_cgi(const std::string& absPath) const
   }
   exit(1);
 }
+
+bool Connection::supportedVersion(const std::string& version) const
+{
+  return version == "HTTP/1.1" || version == "HTTP/1.0" || version == "HTTP/0.9";
+}
+
+bool Connection::validPath(const std::string& path) const
+{
+  const LocationBlock* loc = _searcher->getLocation(_clientFd, _host, path);
+  return loc != NULL;
+}
+
+bool Connection::allowedMethod(const std::string& method) const
+{
+  const ConfigType::DirectiveValue* allowedMethods =
+    _searcher->findLocationDirective(_clientFd, "method", _host, _path);
+
+  // Means all methods are allowed by default
+  if (!allowedMethods) return true;
+
+  const ConfigType::DirectiveValueIt it =
+    std::find(allowedMethods->begin(), allowedMethods->end(), method);
+
+  return it != allowedMethods->end();
+}
+
+const std::string& Connection::getErrorMessage(const int errnum) {
+  // C++98 "Construct on First Use": The map is created and populated
+  // by create_status_map() only the first time this function is called.
+  static const std::map<int, std::string> http_status_codes = create_status_map();
+
+  // A static string to return for unknown codes, prevents creating a new string on every call
+  static const std::string unknown_error_str = "Unknown Error";
+
+  std::map<int, std::string>::const_iterator it = http_status_codes.find(errnum);
+  if (it != http_status_codes.end()) {
+    return it->second; // Return the found message, e.g., "404 Not Found"
+  }
+
+  // In C++98, we can't easily convert the number to a string and return it
+  // as a static const reference. The simplest robust approach is to return a generic message.
+  return unknown_error_str;
+}
+
+int Connection::handleError(const int errnum) {
+
+  const ConfigType::DirectiveValue* root =
+    _searcher->findServerDirective(_sockFd, "root", _host);
+
+  if (root)
+  {
+    const ConfigType::ErrorPage& errorPages =
+      _searcher->getDefaultServer(_sockFd, _host).getErrorPages();
+
+    const ConfigType::ErrorPageIt it = errorPages.find(errnum);
+    if (it != errorPages.end())
+    {
+      std::string absPath = (*root)[0];
+      absPath += "/";
+      absPath += it->second;
+      std::fstream fs(absPath.c_str());
+      if (fs.good())
+      {
+        std::stringstream ss;
+        ss << fs.rdbuf();
+        std::string body = ss.str();
+        size_t contentLength = body.length();
+
+        std::stringstream contentLengthStream;
+        contentLengthStream << contentLength;
+        std::string contentLengthStr = contentLengthStream.str();
+
+         _response =
+          "HTTP/1.1 400 Bad Request\r\n"
+          "Content-Type: text/html; charset=UTF-8\r\n"
+          "Content-Length: " + contentLengthStr + "\r\n"
+          "\r\n"
+          + body;
+      }
+      return 1;
+    }
+  }
+
+  std::string errval = getErrorMessage(errnum);
+
+  _response = "<!DOCTYPE html>\n"
+              "<html>\n"
+              "<head>\n"
+              "<title>Error</title>\n"
+              "<style>\n"
+              "    body {\n"
+              "        width: 35em;\n"
+              "        margin: 0 auto;\n"
+              "        font-family: Tahoma, Verdana, Arial, sans-serif;\n"
+              "    }\n"
+              "</style>\n"
+              "</head>\n"
+              "<body>\n"
+              "<h1>An error occurred.</h1>\n"
+              "<p>Sorry, the page you are looking for is currently unavailable.<br/>\n"
+              "Please try again later.</p>\n"
+              "<p><em>Faithfully yours, nginx.</em></p>\n"
+              "<hr>\n"
+              "<center><h1>" + errval + "</h1></center>\n"
+              "</body>\n"
+              "</html>";
+  LOG_DEBUG << ErrorMessages::E_CONN_CLOSED;
+  return true;
+}
+
 
 void Connection::setEvent()
 {

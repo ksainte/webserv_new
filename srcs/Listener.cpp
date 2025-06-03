@@ -36,8 +36,9 @@ int Listener::handleEvent(const Event* event, const unsigned int flags)
   return 0;
 }
 
-int Listener::handleError()
+int Listener::handleError(const int errnum)
 {
+  (void)errnum;
   return false;
 }
 

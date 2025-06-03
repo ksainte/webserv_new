@@ -22,28 +22,33 @@ struct FindPairEqual :
 
 class Searcher
 {
-
   const Config& _config;
 
   static bool findHost(const ConfigType::DirectiveMap& directives,
-                              const std::string& host);
+                       const std::string& host);
 
-  const ServerBlock& _getDefaultServer(int sockFd, const std::string& host) const;
 
   std::list<std::pair<int, int> > _addresses;
 
 public:
   explicit Searcher(const Config&);
 
-  const LocationBlock* getLocation(int sockFd, const std::string& host, const char* url) const;
+  const ServerBlock& getDefaultServer(int sockFd, const std::string& host) const;
+  const LocationBlock* getLocation(int sockFd, const std::string& host, const std::string& url) const;
 
   const std::list<std::pair<int, int> >& getAddresses() const;
 
-  const ConfigType::DirectiveValue* findServerDirective(int sockFd,
-                                                        const std::string& key, const std::string& host) const;
+  const ConfigType::DirectiveValue*
+  findServerDirective(
+    int sockFd,
+    const std::string& key,
+    const std::string& host) const;
 
-  const ConfigType::DirectiveValue* findLocationDirective(int sockFd,
-                                                          const std::string& key,
-                                                          const std::string& host, const char* route) const;
+  const ConfigType::DirectiveValue*
+  findLocationDirective(
+    int sockFd,
+    const std::string& key,
+    const std::string& host,
+    const std::string& route) const;
 };
 #endif

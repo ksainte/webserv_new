@@ -76,8 +76,11 @@ void	Epoll::wait()
 		for (int i = 0; i < numEvent; ++i)
 		{
 			const Event* event = static_cast<Event *>(_events[i].data.ptr);
-			if (event->getHandler()->handleEvent(event, _events[i].events) == -1)
+			if (event->getHandler()->handleEvent(event, _events[i].events) == 1)
+			{
 				unregisterEvent(event->getFd());
+				close(event->getFd());
+			}
 		}
 	}
 }

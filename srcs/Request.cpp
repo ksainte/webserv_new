@@ -3,72 +3,82 @@
 #include <cstring>
 #include <sys/socket.h>
 #include <cstdlib>
+#include "../inc/Exception.hpp"
+#include "../inc/constants/ErrorMessages.hpp"
+#include "../inc/constants/SuccessMessages.hpp"
 
-const std::string Request::_headersEnd("\r\n\r\n");
-const std::string Request::_headerEnd("\r\n");
+const int Request::_buffSize = 10;
 
-bool Request::isEqual(const unsigned char a, const unsigned char b)
-{
-  return a == b;
-}
-
-bool Request::storeHeaders()
+void Request::storeHeaders()
 {
   std::istringstream iss(std::string(_buf.begin(), _buf.end()));
-  std::string line;
 
-  if (std::getline(iss, line))
-  {
-    std::istringstream lineStream(line);
-    lineStream >> _method >> _path >> _version;
-  }
+  if (!iss)
+    throw Exception(ErrorMessages::E_ISS_CREATE, Exception::BAD_REQUEST);
+
+  iss.exceptions(std::istringstream::failbit | std::istringstream::badbit);
+
+  std::string line;
+  std::getline(iss, line);
+
+  std::istringstream lineStream(line);
+
+  if (!lineStream)
+    throw Exception(ErrorMessages::E_ISS_CREATE, Exception::BAD_REQUEST);
+
+  lineStream.exceptions(std::istringstream::failbit | std::istringstream::badbit);
+  lineStream >> _method >> _path >> _version;
 
   while (std::getline(iss, line) && line[0] != '\r')
   {
     size_t pos = line.find(':');
-    if (pos != std::string::npos)
+    if (pos == std::string::npos)
+      throw Exception(ErrorMessages::E_BAD_HEADER, Exception::BAD_REQUEST);
+
+    std::string key = line.substr(0, pos);
+    std::string value = line.substr(pos + 1);
+
+    // Trim whitespace
+    // Shoudl also trim whitespaces before key and after value
+    key.erase(key.find_last_not_of(' ') + 1);
+    value.erase(0, value.find_first_not_of(' '));
+    value.erase(value.find_last_not_of('\r') + 1);
+
+    // Convert key to lowercase for case-insensitive comparison
+    for (size_t i = 0; i < key.size(); ++i)
     {
-      std::string key = line.substr(0, pos);
-      std::string value = line.substr(pos + 1);
-
-      // Trim whitespace
-      // Shoudl also trim whitespaces before key and after value
-      key.erase(key.find_last_not_of(' ') + 1);
-      value.erase(0, value.find_first_not_of(' '));
-      value.erase(value.find_last_not_of('\r') + 1);
-
-      // Convert key to lowercase for case-insensitive comparison
-      for (size_t i = 0; i < key.size(); ++i)
-      {
-        key[i] = static_cast<char>(std::tolower(key[i]));
-      }
-      _headers[key] = value;
+      key[i] = static_cast<char>(std::tolower(key[i]));
     }
+    _headers[key] = value;
   }
-  return true;
+  LOG_DEBUG << SuccessMessages::HEADERS_STORED;
 }
 
-int Request::extractHeaders(const int fd)
+void Request::extractHeaders(const int fd)
 {
   ssize_t bytesRead = 0;
 
   bytesRead = recv(fd, _buf.data(), _buf.capacity(), MSG_PEEK);
 
-  if (bytesRead == -1) return 1;
+  if (bytesRead == -1)
+    throw Exception(ErrorMessages::E_RECV, Exception::BAD_REQUEST);
 
   const std::vector<unsigned char>::const_iterator it =
     std::search(_buf.begin(), _buf.end(),
-      _headersEnd.begin(), _headersEnd.end(), isEqual);
+                _headersEnd.begin(), _headersEnd.end(), isEqual);
 
-  if (it == _buf.end()) return 1;
+  if (it == _buf.end())
+  {
+    if (bytesRead == _buffSize)
+      throw Exception(ErrorMessages::E_HEADERS_TOO_LONG, Exception::BAD_REQUEST);
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+  }
 
-  _offset = bytesRead - (it - _buf.begin()) + _headersEnd.size();
+  _offset = it - _buf.begin() + _headersEnd.size();
+  bytesRead = recv(fd, _buf.data(), _offset, 0);
 
-  bytesRead = recv(fd, _buf.data(), bytesRead - _offset, 0);
-
-  if (bytesRead == -1) return 1;
-
-  return 0;
+  if (bytesRead == -1)
+    throw Exception(ErrorMessages::E_RECV, Exception::BAD_REQUEST);
 }
 
 Request::Request(): _offset(0)
@@ -82,6 +92,7 @@ Request::Request(const Request& other):
   _method(other.getMethod()),
   _path(other.getPath()),
   _version(other.getVersion()),
+  _host(other.getHost()),
   _buf(other.getBuf()),
   _headers(other.getHeaders())
 {
@@ -97,6 +108,7 @@ Request& Request::operator=(const Request& other)
   _method = other.getMethod();
   _path = other.getPath();
   _version = other.getVersion();
+  _host = other.getHost();
   _buf = other.getBuf();
   _headers = other.getHeaders();
 
@@ -109,6 +121,15 @@ Request::~Request()
   LOG_DEBUG << "Request destructed";
 }
 
+bool Request::isEqual(const unsigned char a, const unsigned char b)
+{
+  return a == b;
+}
+
+const std::string Request::_headersEnd("\r\n\r\n");
+
+const std::string Request::_headerEnd("\r\n");
+
 const std::map<std::string, std::string>&
 Request::getHeaders() const { return _headers; }
 
@@ -119,5 +140,7 @@ const std::string& Request::getMethod() const { return _method; }
 const std::string& Request::getPath() const { return _path; }
 
 const std::string& Request::getVersion() const { return _version; }
+
+const std::string& Request::getHost() const { return _host; }
 
 const std::vector<unsigned char>& Request::getBuf() const { return _buf; }

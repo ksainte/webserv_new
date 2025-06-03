@@ -1,4 +1,6 @@
 #include "../inc/ADirective.hpp"
+#include <cassert>
+#include <cstdlib>
 #include <sstream>
 #include "../inc/Logger.hpp"
 
@@ -6,7 +8,8 @@ const ConfigType::DirectiveMap& ADirective::getDirectives() const { return _dire
 
 ADirective::ADirective(const ADirective& other):
   _directives(other.getDirectives()),
-  _cgiParams(other.getCgiParams())
+  _cgiParams(other.getCgiParams()),
+  _errorPages(other.getErrorPages())
 {
   LOG_DEBUG << "ADirective copied\n";
 }
@@ -17,6 +20,7 @@ ADirective& ADirective::operator=(const ADirective& other)
     return *this;
   _directives = other.getDirectives();
   _cgiParams = other.getCgiParams();
+  _errorPages = other.getErrorPages();
   return *this;
 }
 
@@ -30,6 +34,34 @@ ADirective::~ADirective()
   LOG_DEBUG << "ADirective destroyed";
 }
 
+void ADirective::addErrorPage(std::list<Token>::const_iterator first,
+                              std::list<Token>::const_iterator last)
+{
+  std::list<Token>::const_iterator it = first;
+
+  while (it != last && it->type != Token::SEMICOLON)
+    ++it;
+
+  assert(it != last && "index out of bound");
+
+  --it;
+  std::string filename;
+
+  for (; it != first; --it)
+  {
+    unsigned int errnum = 0;
+    std::stringstream ss(it->value);
+    if (!ss)
+      continue;
+    ss >> std::dec >> errnum;
+
+    if (!ss.eof())
+      filename = it->value;
+    else if (!filename.empty() && 200 <= errnum && errnum < 600)
+      _errorPages[errnum] = filename;
+  }
+}
+
 void ADirective::addCgiParams(std::string first, std::string last)
 {
   (void)last;
@@ -39,6 +71,11 @@ void ADirective::addCgiParams(std::string first, std::string last)
 const ConfigType::CgiParams& ADirective::getCgiParams() const
 {
   return _cgiParams;
+}
+
+const ConfigType::ErrorPage& ADirective::getErrorPages() const
+{
+  return _errorPages;
 }
 
 std::string ADirective::toJson(int indentLevel) const
@@ -107,57 +144,3 @@ std::string ADirective::toJson(int indentLevel) const
   // Return the accumulated JSON string fragment
   return ss.str();
 }
-
-/**
- * @brief (C++98) Serializes the stored directives into a JSON string fragment.
- * @details Generates a comma-separated list of "key": [value_array] pairs suitable
- * for embedding within a larger JSON object.
- * @param indentLevel The base indentation level for formatting. Keys/arrays are indented one level deeper.
- * @return std::string A string containing the JSON representation of the directives.
- * @note Assumes existence of an `indent(int)` helper function.
- * @note Does NOT add enclosing curly braces `{}` for a complete JSON object.
- * @note Does NOT escape special characters within keys or values (potential for invalid JSON).
- */
-// std::string ADirective::toJson(int indentLevel) const
-// {
-//   // Use stringstream for efficient string building in C++98
-//   std::stringstream ss;
-//   // Assume indent() provides appropriate indentation string (e.g., spaces)
-//   std::string ind = indent(indentLevel);
-//
-//   bool firstDirective = true; // Flag to manage leading commas between directives
-//
-//   // Iterate through the map of directives (_directives)
-//   for (DirectiveMap::const_iterator it = _directives.begin(); it != _directives.end(); ++it)
-//   {
-//     // Add comma separator before subsequent directives
-//     if (!firstDirective)
-//     {
-//       ss << ",\n";
-//     }
-//     // Output key (in quotes) and start of the value array
-//     ss << ind << "\"" << it->first << "\": [";
-//
-//     bool firstValue = true; // Flag to manage leading commas within the value array
-//     // Iterate through the vector of values for the current directive
-//     DirectiveValueIt valIt = it->second.begin();
-//     DirectiveValueIt valEnd = it->second.end();
-//
-//     for (; valIt != valEnd; ++valIt)
-//     {
-//       // Add comma separator before subsequent values
-//       if (!firstValue)
-//       {
-//         ss << ", ";
-//       }
-//       // Output value string in quotes (NOTE: No escaping applied)
-//       ss << "\"" << *valIt << "\"";
-//       firstValue = false;
-//     }
-//     // Close the value array
-//     ss << "]";
-//     firstDirective = false; // Mark that the first directive has been processed
-//   }
-//   // Return the accumulated JSON string fragment
-//   return ss.str();
-// }

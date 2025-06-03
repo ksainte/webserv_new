@@ -16,5 +16,13 @@ class ErrorMessages {
 		static const char* E_EPOLL_WAIT;
 		static const char* E_INSERT_MAP;
 		static const char* E_CONN_EXIST;
+		static const char* E_ISS_CREATE;
+		static const char* E_BAD_HEADER;
+		static const char* E_HEADER_PARSE;
+		static const char* E_RECV;
+		static const char* E_HEADER_NOT_FOUND;
+		static const char* E_HEADERS_END_NOT_FOUND;
+		static const char* E_CONN_CLOSED;
+		static const char* E_HEADERS_TOO_LONG;
 };
 #endif

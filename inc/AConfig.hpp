@@ -86,14 +86,21 @@ private:
     assert(!_serverBlocks.empty() && "size must not be 0");
 
     // Add directive directly to the last server block
-    if (_target == SERVER)
+    if (_target == SERVER && _value != "error_page")
     {
       _serverBlocks[_serverBlocks.size() - 1]
         .addDirective(_it, _end);
       return ;
     }
+
+    if (_target == SERVER && _value == "error_page")
+    {
+      _serverBlocks[_serverBlocks.size() - 1].addErrorPage(_it, _end);
+      return ;
+    }
+
     // Add directive to a location sub-block in the last server block
-    if (_value != "cgi_params")
+    if (_value != "cgi_params" && _value != "error_page")
     {
       _serverBlocks[_serverBlocks.size() - 1]
         .search(_prefix)->addDirective(_it, _end);
@@ -102,13 +109,18 @@ private:
 
     // Quick fix to store cgi_params since this directive isn't
     // unique and cant be store inside the directive map
-    typename T::const_iterator tmp = _it;
-    typename T::const_iterator tmp2 = _it;
-    std::advance(tmp, 1);
-    std::advance(tmp2, 2);
-    _serverBlocks[_serverBlocks.size() - 1]
-      .search(_prefix)
-      ->addCgiParams((*tmp).value, (*tmp2).value);
+    if (_value == "cgi_params")
+    {
+      typename T::const_iterator tmp = _it;
+      typename T::const_iterator tmp2 = _it;
+      std::advance(tmp, 1);
+      std::advance(tmp2, 2);
+      _serverBlocks[_serverBlocks.size() - 1]
+        .search(_prefix)
+        ->addCgiParams((*tmp).value, (*tmp2).value);
+      return;
+    }
+
   }
 
   void _serverBlockHandler()

@@ -26,7 +26,7 @@ bool Searcher::findHost(const ConfigType::DirectiveMap& directives, const std::s
   return true;
 }
 
-const ServerBlock& Searcher::_getDefaultServer(const int sockFd, const std::string& host) const
+const ServerBlock& Searcher::getDefaultServer(const int sockFd, const std::string& host) const
 {
   // Get socket address
   sockaddr_in addr = {};
@@ -60,20 +60,20 @@ const ServerBlock& Searcher::_getDefaultServer(const int sockFd, const std::stri
   return *defaultServer;
 }
 
-const LocationBlock* Searcher::getLocation(const int sockFd, const std::string& host, const char* url) const
+const LocationBlock* Searcher::getLocation(const int sockFd, const std::string& host, const std::string& url) const
 {
-  const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
+  const ServerBlock& serverBlock = getDefaultServer(sockFd, host);
   const LocationBlock* locationBlock = serverBlock.search(url);
   return locationBlock;
 }
 
 const ConfigType::DirectiveValue* Searcher::findLocationDirective(const int sockFd,
                                                                   const std::string& key, const std::string& host,
-                                                                  const char* route) const
+                                                                  const std::string& route) const
 {
   // Get the default server for a specific host
   // or the first server
-  const ServerBlock& serverBlock = _getDefaultServer(sockFd, host);
+  const ServerBlock& serverBlock = getDefaultServer(sockFd, host);
 
   // Get route configuration
   const LocationBlock* locationBlock = serverBlock.search(route);
@@ -99,7 +99,7 @@ const ConfigType::DirectiveValue* Searcher::findServerDirective(const int sockFd
 {
   // Get the default server for a specific host
   const ServerBlock& serverBlock =
-    _getDefaultServer(sockFd, host);
+    getDefaultServer(sockFd, host);
 
   // Get directive
   ConfigType::DirectiveMapIt it = serverBlock.getDirectives().find(key);

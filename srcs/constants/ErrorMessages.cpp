@@ -31,7 +31,7 @@ const char* ErrorMessages::E_EPOLL_CTL_MOD =
 "error when modifying epoll's interest list";
 
 const char* ErrorMessages::E_EPOLL_CTL_DEL =
-"error when deleting new fd in epoll's interest list";
+"error when deleting fd in epoll's interest list";
 
 const char* ErrorMessages::E_EPOLL_WAIT =
 "error when waiting for events";
@@ -41,3 +41,24 @@ const char* ErrorMessages::E_INSERT_MAP =
 
 const char* ErrorMessages::E_CONN_EXIST =
 "connexion already in use";
+
+const char* ErrorMessages::E_ISS_CREATE =
+  "error during input stream string creation";
+
+const char* ErrorMessages::E_BAD_HEADER =
+  "invalid header format";
+
+const char* ErrorMessages::E_HEADER_PARSE =
+  "error when parsing header: ";
+
+const char* ErrorMessages::E_RECV =
+  "recv failure: ";
+
+const char* ErrorMessages::E_HEADERS_END_NOT_FOUND =
+  "end of headers not found";
+
+const char* ErrorMessages::E_CONN_CLOSED =
+  "connection will be closed";
+
+const char* ErrorMessages::E_HEADERS_TOO_LONG =
+  "headers exceed maximum size";

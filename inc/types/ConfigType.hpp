@@ -15,6 +15,10 @@ class ConfigType {
 
 		typedef std::list<std::pair<std::string, std::string> >::const_iterator CgiParamsIt;
 
+		typedef std::map<unsigned int, std::string> ErrorPage;
+
+		typedef std::map<unsigned int, std::string>::const_iterator ErrorPageIt;
+
 		typedef std::vector<ServerBlock> 					ServerBlocks;
 		typedef std::vector<ServerBlock>::const_iterator 	ServerBlockIt;
 

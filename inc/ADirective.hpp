@@ -71,11 +71,15 @@ public:
   const CgiParams& getCgiParams() const;
   void addCgiParams(std::string first, std::string last);
 
+  const ErrorPage& getErrorPages() const;
+  void	addErrorPage(std::list<Token>::const_iterator first, std::list<Token>::const_iterator last);
+
   virtual const DirectiveMap& getDirectives() const;
   std::string toJson(int indentLevel) const;
 
 private:
-  DirectiveMap _directives;
-  CgiParams _cgiParams;
+  DirectiveMap  _directives;
+  CgiParams     _cgiParams;
+  ErrorPage     _errorPages;
 };
 #endif
