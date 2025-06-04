@@ -202,18 +202,20 @@ bool Connection::sendResponse()
       }
     }
   }
-  //
-  // const std::string e501 =
-  //   "HTTP/1.0 501 Not Implemented\r\n"
-  //   "Content-Type: text/plain\r\n"
-  //   "Content-Length: 19\r\n"
-  //   "Connection: close\r\n"
-  //   "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-  //   "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-  //   "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
-  //   "501 Not Implemented";
-  //
-  // send(_sockFd, e501.c_str(), e501.size(), 0);
+
+  _manager->unregisterEvent(_clientFd);
+  const std::string e501 =
+    "HTTP/1.0 501 Not Implemented\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 19\r\n"
+    "Connection: close\r\n"
+    "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+    "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+    "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
+    "501 Not Implemented";
+
+  send(_clientFd, e501.c_str(), e501.size(), 0);
+  close(_clientFd);
   return false;
 }
 
