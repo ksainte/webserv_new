@@ -24,5 +24,6 @@ class ErrorMessages {
 		static const char* E_HEADERS_END_NOT_FOUND;
 		static const char* E_CONN_CLOSED;
 		static const char* E_HEADERS_TOO_LONG;
+		static const char* E_MAX_BODY_SIZE;
 };
 #endif

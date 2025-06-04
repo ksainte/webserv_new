@@ -11,6 +11,7 @@
 #include "../inc/Exception.hpp"
 #include "../inc/Logger.hpp"
 #include "../inc/Searcher.hpp"
+#include "../inc/utils.hpp"
 
 Connection::Connection():
   _manager(NULL),
@@ -57,6 +58,23 @@ Connection::~Connection()
   LOG_DEBUG << "Connection destroyed\n";
 }
 
+void Connection::checkBodySize() const
+{
+  const HeaderIt it = _headers.find("content-length");
+
+  ssize_t requestBodySize = 0;
+
+  if (it != _headers.end() && bodySize(it->second) == -1)
+    requestBodySize = _defaultMaxBodySize;
+
+  const ConfigType::DirectiveValue* val =
+   _searcher->findLocationDirective(_sockFd, "client_max_body_size", _host, _path);
+
+  if (val && bodySize((*val)[0]) < requestBodySize)
+    throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
+}
+
+
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN)
@@ -65,6 +83,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     {
       extractHeaders(_clientFd);
       storeHeaders();
+      checkBodySize();
     }
     catch (Exception& e)
     {

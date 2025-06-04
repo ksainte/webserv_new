@@ -3,7 +3,7 @@
 #include <ctime>
 #include <vector>
 
-const Logger::LogLevel Logger::CURRENT_LOG_LEVEL = WARNING;
+const Logger::LogLevel Logger::CURRENT_LOG_LEVEL = DEBUG;
 std::ofstream Logger::logFile;
 
 void Logger::setLogFile(const std::string& filename) {

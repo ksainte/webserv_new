@@ -16,7 +16,10 @@ class Connection : public virtual IEventHandler, public Request, public IParser
 
   int send_to_cgi(const char * absPath);
 
+  void  checkBodySize() const;
 
+  // 50MB
+  static const int _defaultMaxBodySize = 50000000;
 
   Epoll* _manager;
   Searcher* _searcher;

@@ -62,3 +62,6 @@ const char* ErrorMessages::E_CONN_CLOSED =
 
 const char* ErrorMessages::E_HEADERS_TOO_LONG =
   "headers exceed maximum size";
+
+const char* ErrorMessages::E_MAX_BODY_SIZE =
+  "request body size exceed maximum";
