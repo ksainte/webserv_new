@@ -7,7 +7,7 @@
 #include "../inc/constants/ErrorMessages.hpp"
 #include "../inc/constants/SuccessMessages.hpp"
 
-const int Request::_buffSize = 10;
+const int Request::_buffSize = 1024;
 
 void Request::storeHeaders()
 {

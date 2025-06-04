@@ -11,6 +11,7 @@ class ConnectionManager;
 
 class Connection : public virtual IEventHandler, public Request, public IParser
 {
+
   bool sendResponse() const;
   int send_to_cgi(const std::string& absPath) const;
 
@@ -20,7 +21,7 @@ class Connection : public virtual IEventHandler, public Request, public IParser
   int _clientFd;
   Event _event;
 
-  std::string _response;
+  std::string _ErrResponse;
 
   const std::string& getErrorMessage(int errnum);
 

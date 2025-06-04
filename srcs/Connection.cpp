@@ -63,7 +63,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   {
     try
     {
-      extractHeaders(p->getFd());
+      extractHeaders(_clientFd);
       storeHeaders();
     }
     catch (Exception& e)
@@ -82,9 +82,9 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   }
   if (flags & EPOLLOUT)
   {
-    if (!_response.empty())
+    if (!_ErrResponse.empty())
     {
-      send(_clientFd, _response.c_str(), _response.size(), 0);
+      send(_clientFd, _ErrResponse.c_str(), _ErrResponse.size(), 0);
       return 1;
     }
 
@@ -117,6 +117,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       if (pid == 0)
       {
         dup2(_clientFd, STDIN_FILENO);
+        dup2(_clientFd, STDOUT_FILENO);
         execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
         perror("execve: ");
         exit(1);
@@ -273,20 +274,15 @@ bool Connection::allowedMethod(const std::string& method) const
 }
 
 const std::string& Connection::getErrorMessage(const int errnum) {
-  // C++98 "Construct on First Use": The map is created and populated
-  // by create_status_map() only the first time this function is called.
-  static const std::map<int, std::string> http_status_codes = create_status_map();
 
-  // A static string to return for unknown codes, prevents creating a new string on every call
+  static const std::map<int, std::string> http_status_codes = create_status_map();
   static const std::string unknown_error_str = "Unknown Error";
 
   std::map<int, std::string>::const_iterator it = http_status_codes.find(errnum);
   if (it != http_status_codes.end()) {
-    return it->second; // Return the found message, e.g., "404 Not Found"
+    return it->second;
   }
 
-  // In C++98, we can't easily convert the number to a string and return it
-  // as a static const reference. The simplest robust approach is to return a generic message.
   return unknown_error_str;
 }
 
@@ -318,7 +314,7 @@ int Connection::handleError(const int errnum) {
         contentLengthStream << contentLength;
         std::string contentLengthStr = contentLengthStream.str();
 
-         _response =
+         _ErrResponse =
           "HTTP/1.1 400 Bad Request\r\n"
           "Content-Type: text/html; charset=UTF-8\r\n"
           "Content-Length: " + contentLengthStr + "\r\n"
@@ -331,7 +327,7 @@ int Connection::handleError(const int errnum) {
 
   std::string errval = getErrorMessage(errnum);
 
-  _response = "<!DOCTYPE html>\n"
+  _ErrResponse = "<!DOCTYPE html>\n"
               "<html>\n"
               "<head>\n"
               "<title>Error</title>\n"
