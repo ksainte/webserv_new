@@ -88,6 +88,12 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       return 1;
     }
 
+    if (_path == "/favicon.ico")
+    {
+      _manager->unregisterEvent(p->getFd());
+      close(p->getFd());
+      return 0;
+    }
     // _manager->unregisterEvent(p->getFd());
 
     if (_method == "POST")
@@ -248,6 +254,10 @@ char *get_content_type(char *filename)
   else if (strcmp(file_extension, "mp4") == 0)
   {
     return "video/mp4";
+  }
+  else if (strcmp(file_extension, "mvk") == 0)
+  {
+    return "video/mkv";
   }
   else {
     return "text/plain";
