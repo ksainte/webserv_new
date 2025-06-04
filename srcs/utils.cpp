@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <sstream>
+#include <map>
 
 /**
  * @brief Convert a ipV4 address in dot notation into binary in network-bytes order
@@ -84,6 +85,43 @@ std::string	nlToipv4(unsigned int netLong) {
 		mask = 0;
 	}
 	return oss.str();
+}
+
+// Helper since we first store the body size as a string
+ssize_t bodySize(const std::string& s)
+{
+  std::stringstream iss(s);
+
+  std::map<char, ssize_t> conversions;
+  conversions['B'] = 1;
+  conversions['K'] = 1000;
+  conversions['M'] = 1000000;
+
+  ssize_t n;
+  char suffix;
+
+  iss >> n;
+
+  if (n < 0) return -1;
+
+  if (iss.fail()) return -1;
+
+  if (iss.peek() == -1) return n;
+
+  iss >> suffix;
+
+  if (iss.peek() != -1) return -1;
+
+  const std::map<char, ssize_t>::const_iterator it =
+  conversions.find(suffix);
+
+  if (it == conversions.end()) return -1;
+
+  const ssize_t overflow = n * it->second;
+
+  if (overflow / it->second != n) return -1;
+
+  return n * it->second;
 }
 
 bool&	getSigIntFlag() {

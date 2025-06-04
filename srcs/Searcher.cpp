@@ -67,9 +67,12 @@ const LocationBlock* Searcher::getLocation(const int sockFd, const std::string& 
   return locationBlock;
 }
 
-const ConfigType::DirectiveValue* Searcher::findLocationDirective(const int sockFd,
-                                                                  const std::string& key, const std::string& host,
-                                                                  const std::string& route) const
+const ConfigType::DirectiveValue*
+Searcher::findLocationDirective(
+  const int sockFd,
+  const std::string& key,
+  const std::string& host,
+  const std::string& route) const
 {
   // Get the default server for a specific host
   // or the first server
@@ -85,13 +88,18 @@ const ConfigType::DirectiveValue* Searcher::findLocationDirective(const int sock
 
   // Access route configuration to get the directive
   ConfigType::DirectiveMapIt it = locationBlock->getDirectives().find(key);
-  if (it == locationBlock->getDirectives().end())
-  {
-    LOG_INFO << "\'" + key + "\' " << ErrorMessages::KEY_NOT_FOUND;
-    return NULL;
-  }
 
-  return &(it->second);
+  if (it != locationBlock->getDirectives().end())
+    return &(it->second);
+
+  // If the directive is not found inside the route
+  // configuration, it must fall back to the directive in the server block
+  const ConfigType::DirectiveValue* val = findServerDirective(sockFd, key, host);
+  if (val)
+    return val;
+
+  LOG_INFO << "\'" + key + "\' " << ErrorMessages::KEY_NOT_FOUND;
+  return NULL;
 }
 
 const ConfigType::DirectiveValue* Searcher::findServerDirective(const int sockFd,
