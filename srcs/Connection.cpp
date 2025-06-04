@@ -196,6 +196,7 @@ bool Connection::sendResponse()
     std::clog << "\nroute is not valid\n";
     return false;
   }
+
   const std::string prefix(location->getPrefix());
 
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", host, prefix.c_str());
