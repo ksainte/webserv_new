@@ -10,6 +10,7 @@
 !contents/
 !contents/**
 contents/full.mp4
+contents/test.html
 !cgi-bin/
 !cgi-bin/**
 !GET.cpp
