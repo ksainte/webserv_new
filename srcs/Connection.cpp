@@ -178,7 +178,8 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       
       if (isPathValid() && pathIsValid == 0)
       {
-        //le get est cgi ou pas?
+        //le get est cgi ou pas? si oui ca va execve ici, si non on continue vers readFile!
+        // isGetRequestaCGI();
         pathIsValid = 1;
         readFILE(absPath.c_str());
       }
