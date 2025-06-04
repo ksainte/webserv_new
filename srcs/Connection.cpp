@@ -74,7 +74,6 @@ void Connection::checkBodySize() const
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
-
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN)
