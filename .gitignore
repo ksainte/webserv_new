@@ -9,6 +9,7 @@
 !configFile/**
 !contents/
 !contents/**
+contents/full.mp4
 !cgi-bin/
 !cgi-bin/**
 !GET.cpp
