@@ -16,6 +16,7 @@ class Connection : public virtual IEventHandler, public Request, public IParser
 
   int send_to_cgi(const char * absPath);
   // int send_to_cgi(const std::string& absPath) const;
+    // int send_to_cgi(const std::string& absPath) const;
 
   Epoll* _manager;
   Searcher* _searcher;
