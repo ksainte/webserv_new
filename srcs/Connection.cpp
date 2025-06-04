@@ -187,22 +187,28 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     }
     else
     {
-      sendResponse();
+
+      if (isPathValid() && pathIsValid == 0)
+      {
+        //le get est cgi ou pas? si oui ca va execve ici, si non on continue vers readFile!
+        // isGetRequestaCGI();
+        pathIsValid = 1;
+        readFILE(absPath.c_str());
+      }
+      else if(pathIsValid == 1)
+      {
+        readFILE(absPath.c_str());
+      }
     }
   }
   return 0;
 }
 
-bool Connection::sendResponse()
+bool Connection::isPathValid()
 {
   std::string root_directory;
 
-  std::string host;
-  const HeaderIt it = _headers.find("host");
-  if (it != _headers.end())
-    host = it->second;
-
-  const LocationBlock* location = _searcher->getLocation(_sockFd, host, _path.c_str());
+  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
   if (!location)
   {
     std::clog << "\nroute is not valid\n";
@@ -211,7 +217,7 @@ bool Connection::sendResponse()
 
   const std::string prefix(location->getPrefix());
 
-  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", host, prefix.c_str());
+  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
   {
     std::clog << "root is not valid\n";
@@ -219,14 +225,13 @@ bool Connection::sendResponse()
   }
 
   struct stat stats = {};
-  std::string absPath = (*p)[0];
+  absPath = (*p)[0];
   stat(absPath.c_str(), &stats);
 
   if (!access(absPath.c_str(), F_OK))
   {
     if (!S_ISDIR(stats.st_mode))
     {
-      send_to_cgi(absPath.c_str());
       return true;
     }
     else
@@ -238,12 +243,11 @@ bool Connection::sendResponse()
     {
       if (!S_ISDIR(stats.st_mode))
       {
-        send_to_cgi(absPath.c_str());
         return true;
       }
     }
 
-    p = _searcher->findLocationDirective(_sockFd, "index", host, prefix.c_str());
+    p = _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
     if (p)
     {
       for (ConfigType::DirectiveValueIt it = p->begin(); it != p->end(); ++it)
@@ -257,22 +261,13 @@ bool Connection::sendResponse()
         if (!access(tmp.c_str(), F_OK)
           && !S_ISDIR(stats.st_mode))
         {
-          send_to_cgi(tmp.c_str());
+          absPath = tmp;
           return true;
         }
       }
     }
   }
-  // const std::string res =
-  // "HTTP/1.0 404 Not Found\r\n"
-  // "Content-Type: text/plain\r\n"
-  // "Connection: close\r\n"
-  // "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-  // "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-  // "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n";
-  // send(_clientFd, res.c_str(), res.size(), 0);
-  // _manager->unregisterEvent(p->getFd());
-  // close(p->getFd());
+
   _manager->unregisterEvent(_clientFd);
   const std::string e501 =
     "HTTP/1.0 501 Not Implemented\r\n"
@@ -315,7 +310,8 @@ char* get_content_type(char* filename)
   else if (strcmp(file_extension, "gif") == 0)
   {
     return "image/gif";
-  }
+  }  bool sendResponse();
+
   else if ((strcmp(file_extension, "html") == 0) ||
     (strcmp(file_extension, "htm") == 0))
   {
@@ -335,14 +331,13 @@ char* get_content_type(char* filename)
   }
 }
 
-int Connection::send_to_cgi(const char* absPath)
+int Connection::readFILE(const char * absPath)
 {
   static int flag;
 
   if (MyReadFile.gcount() == 0 && flag == 0)
   {
-    MyReadFile.open(absPath, std::ios::binary | std::ios::ate);
-    std::clog << MyReadFile.tellg() << "\n";
+    MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
     int fileLenght = MyReadFile.tellg();
     MyReadFile.seekg(0, MyReadFile.beg);
     char* contentType = get_content_type((char*)absPath);
@@ -378,6 +373,7 @@ int Connection::send_to_cgi(const char* absPath)
     _manager->unregisterEvent(_clientFd);
     close(_clientFd);
     flag = 0;
+    pathIsValid = 0;
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }

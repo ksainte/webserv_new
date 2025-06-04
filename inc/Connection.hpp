@@ -14,9 +14,11 @@ class Connection : public virtual IEventHandler, public Request, public IParser
 
   void _defaultErrorPage(int errnum);
 
-  bool sendResponse();
+  // bool sendResponse();
+  bool isPathValid();
 
   int send_to_cgi(const char * absPath);
+  int readFILE(const char * absPath);
 
   void  checkBodySize() const;
 
@@ -29,6 +31,8 @@ class Connection : public virtual IEventHandler, public Request, public IParser
   int _clientFd;
   Event _event;
   std::string _ErrResponse;
+  std::string absPath;
+  int         pathIsValid;
 
   //GET
   std::ifstream MyReadFile;
