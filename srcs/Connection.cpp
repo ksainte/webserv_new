@@ -66,9 +66,11 @@ void Connection::checkBodySize() const
 
   if (it != _headers.end() && bodySize(it->second) == -1)
     requestBodySize = _defaultMaxBodySize;
+  else if (it != _headers.end() && bodySize(it->second) != -1)
+    requestBodySize = bodySize(it->second);
 
   const ConfigType::DirectiveValue* val =
-   _searcher->findLocationDirective(_sockFd, "client_max_body_size", _host, _path);
+    _searcher->findLocationDirective(_sockFd, "client_max_body_size", _host, _path);
 
   if (val && bodySize((*val)[0]) < requestBodySize)
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
@@ -102,12 +104,22 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   {
     if (!_ErrResponse.empty())
     {
-      send(_clientFd, _ErrResponse.c_str(), _ErrResponse.size(), 0);
-      return 1;
+      send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
+      _manager->unregisterEvent(p->getFd());
+      close(p->getFd());
+      return 0;
     }
 
     if (_path == "/favicon.ico")
     {
+      const std::string res =
+        "HTTP/1.0 404 Not Found\r\n"
+        "Content-Type: text/plain\r\n"
+        "Connection: close\r\n"
+        "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+        "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+        "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n";
+      send(_clientFd, res.c_str(), res.size(), 0);
       _manager->unregisterEvent(p->getFd());
       close(p->getFd());
       return 0;
@@ -158,15 +170,15 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       if (result == 0)
       {
         const std::string e501 =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html; charset=UTF-8\r\n"
-        "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-        "Content-Length: 1234\r\n\r\n"    
-        "<html>"
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: text/html; charset=UTF-8\r\n"
+          "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+          "Content-Length: 1234\r\n\r\n"
+          "<html>"
           "<body>"
-            "<h1>File file.html deleted.</h1>"
+          "<h1>File file.html deleted.</h1>"
           "</body>"
-        "</html>";
+          "</html>";
         send(_clientFd, e501.c_str(), e501.size(), 0);
       }
       std::clog << result;
@@ -175,7 +187,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     }
     else
     {
-        sendResponse();
+      sendResponse();
     }
   }
   return 0;
@@ -251,7 +263,16 @@ bool Connection::sendResponse()
       }
     }
   }
-
+  // const std::string res =
+  // "HTTP/1.0 404 Not Found\r\n"
+  // "Content-Type: text/plain\r\n"
+  // "Connection: close\r\n"
+  // "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+  // "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+  // "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n";
+  // send(_clientFd, res.c_str(), res.size(), 0);
+  // _manager->unregisterEvent(p->getFd());
+  // close(p->getFd());
   _manager->unregisterEvent(_clientFd);
   const std::string e501 =
     "HTTP/1.0 501 Not Implemented\r\n"
@@ -262,39 +283,44 @@ bool Connection::sendResponse()
     "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
     "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
     "501 Not Implemented";
-    
 
   send(_clientFd, e501.c_str(), e501.size(), 0);
   close(_clientFd);
   return false;
 }
 
-char *get_content_type(char *filename)
+char* get_content_type(char* filename)
 {
-  char *file_path = strtok(filename, ".");
-  char *file_extension;
-  while (file_path != NULL) { // find the file extension
+  char* file_path = strtok(filename, ".");
+  char* file_extension;
+  while (file_path != NULL)
+  {
+    // find the file extension
     file_extension = file_path;
-    file_path      = strtok(NULL, " ");
+    file_path = strtok(NULL, " ");
   }
 
   // sets file extension to lowercase in order to compare strings
-  for (int i = 0; file_extension[i]; i++) {
+  for (int i = 0; file_extension[i]; i++)
+  {
     file_extension[i] = tolower(file_extension[i]);
   }
 
   // comparing the strings to match with its corresponding type
   if ((strcmp(file_extension, "jpeg") == 0) ||
-      (strcmp(file_extension, "jpg") == 0)) {
+    (strcmp(file_extension, "jpg") == 0))
+  {
     return "image/jpeg";
-      }
-  else if (strcmp(file_extension, "gif") == 0) {
+  }
+  else if (strcmp(file_extension, "gif") == 0)
+  {
     return "image/gif";
   }
   else if ((strcmp(file_extension, "html") == 0) ||
-           (strcmp(file_extension, "htm") == 0)) {
+    (strcmp(file_extension, "htm") == 0))
+  {
     return "text/html";
-           }
+  }
   else if (strcmp(file_extension, "mp4") == 0)
   {
     return "video/mp4";
@@ -303,30 +329,31 @@ char *get_content_type(char *filename)
   {
     return "video/mkv";
   }
-  else {
+  else
+  {
     return "text/plain";
   }
 }
 
-int Connection::send_to_cgi(const char * absPath)
+int Connection::send_to_cgi(const char* absPath)
 {
   static int flag;
 
   if (MyReadFile.gcount() == 0 && flag == 0)
   {
-    MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
+    MyReadFile.open(absPath, std::ios::binary | std::ios::ate);
     std::clog << MyReadFile.tellg() << "\n";
     int fileLenght = MyReadFile.tellg();
     MyReadFile.seekg(0, MyReadFile.beg);
-    char *contentType = get_content_type((char*)absPath);
+    char* contentType = get_content_type((char*)absPath);
 
     std::ostringstream headers;
     headers << "HTTP/1.1 200 OK\r\n"
-        << "Content-Length: " << fileLenght << "\r\n"
-        << "Content-Type: " << contentType << "\r\n"
-        << "Connection: keep-alive\r\n"
-        << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-        << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
+      << "Content-Length: " << fileLenght << "\r\n"
+      << "Content-Type: " << contentType << "\r\n"
+      << "Connection: close\r\n"
+      << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+      << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
     std::string headers_buff = headers.str();
 
     send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
@@ -334,7 +361,7 @@ int Connection::send_to_cgi(const char * absPath)
     return (0);
   }
 
-  MyReadFile.read (_buffer, sizeof(_buffer));
+  MyReadFile.read(_buffer, sizeof(_buffer));
 
   if (MyReadFile.gcount() > 0)
   {
@@ -354,10 +381,7 @@ int Connection::send_to_cgi(const char * absPath)
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
-
-
 }
-
 
 // int Connection::send_to_cgi(const std::string& absPath) const
 // {
@@ -410,85 +434,114 @@ bool Connection::allowedMethod(const std::string& method) const
   return it != allowedMethods->end();
 }
 
-const std::string& Connection::getErrorMessage(const int errnum) {
-
+const std::string& Connection::getErrorMessage(const int errnum)
+{
   static const std::map<int, std::string> http_status_codes = create_status_map();
   static const std::string unknown_error_str = "Unknown Error";
 
   std::map<int, std::string>::const_iterator it = http_status_codes.find(errnum);
-  if (it != http_status_codes.end()) {
+  if (it != http_status_codes.end())
+  {
     return it->second;
   }
 
   return unknown_error_str;
 }
 
-int Connection::handleError(const int errnum) {
-
-  const ConfigType::DirectiveValue* root =
-    _searcher->findServerDirective(_sockFd, "root", _host);
-
-  if (root)
-  {
-    const ConfigType::ErrorPage& errorPages =
-      _searcher->getDefaultServer(_sockFd, _host).getErrorPages();
-
-    const ConfigType::ErrorPageIt it = errorPages.find(errnum);
-    if (it != errorPages.end())
-    {
-      std::string absPath = (*root)[0];
-      absPath += "/";
-      absPath += it->second;
-      std::fstream fs(absPath.c_str());
-      if (fs.good())
-      {
-        std::stringstream ss;
-        ss << fs.rdbuf();
-        std::string body = ss.str();
-        size_t contentLength = body.length();
-
-        std::stringstream contentLengthStream;
-        contentLengthStream << contentLength;
-        std::string contentLengthStr = contentLengthStream.str();
-
-         _ErrResponse =
-          "HTTP/1.1 400 Bad Request\r\n"
-          "Content-Type: text/html; charset=UTF-8\r\n"
-          "Content-Length: " + contentLengthStr + "\r\n"
-          "\r\n"
-          + body;
-      }
-      return 1;
-    }
-  }
-
+void Connection::_defaultErrorPage(const int errnum)
+{
   std::string errval = getErrorMessage(errnum);
 
-  _ErrResponse = "<!DOCTYPE html>\n"
-              "<html>\n"
-              "<head>\n"
-              "<title>Error</title>\n"
-              "<style>\n"
-              "    body {\n"
-              "        width: 35em;\n"
-              "        margin: 0 auto;\n"
-              "        font-family: Tahoma, Verdana, Arial, sans-serif;\n"
-              "    }\n"
-              "</style>\n"
-              "</head>\n"
-              "<body>\n"
-              "<h1>An error occurred.</h1>\n"
-              "<p>Sorry, the page you are looking for is currently unavailable.<br/>\n"
-              "Please try again later.</p>\n"
-              "<p><em>Faithfully yours, nginx.</em></p>\n"
-              "<hr>\n"
-              "<center><h1>" + errval + "</h1></center>\n"
-              "</body>\n"
-              "</html>";
-  LOG_DEBUG << ErrorMessages::E_CONN_CLOSED;
-  return true;
+  std::string body =
+    "<!DOCTYPE html>\n"
+    "<html>\n"
+    "<head>\n"
+    "<title>Error</title>\n"
+    "<style>\n"
+    "    body {\n"
+    "        width: 35em;\n"
+    "        margin: 0 auto;\n"
+    "        font-family: Tahoma, Verdana, Arial, sans-serif;\n"
+    "    }\n"
+    "</style>\n"
+    "</head>\n"
+    "<body>\n"
+    "<h1>An error occurred.</h1>\n"
+    "<p>Sorry, the page you are looking for is currently unavailable.<br/>\n"
+    "Please try again later.</p>\n"
+    "<p><em>Faithfully yours, webserv.</em></p>\n"
+    "<hr>\n"
+    "<center><h1>" + errval + "</h1></center>\n"
+    "</body>\n"
+    "</html>";
+
+  std::ostringstream res;
+  res << "HTTP/1.1 " << errval << "\r\n"
+    << "Content-Length: " << body << "\r\n"
+    << "Content-Type: text/html\r\n"
+    << "Connection: close\r\n\r\n"
+    << body;
+
+  _ErrResponse = res.str();
 }
 
+int Connection::handleError(const int errnum)
+{
+  const ConfigType::ErrorPage& errorPages =
+    _searcher->getDefaultServer(_sockFd, _host).getErrorPages();
+
+  const ConfigType::DirectiveValue* root =
+    _searcher->findLocationDirective(_sockFd, "root", _host, _path);
+
+  if (!root || errorPages.empty())
+  {
+    _defaultErrorPage(errnum);
+    return 0;
+  }
+
+  const ConfigType::ErrorPageIt it = errorPages.find(errnum);
+
+  if (it == errorPages.end())
+  {
+    _defaultErrorPage(errnum);
+    return 0;
+  }
+
+  std::string absPath = (*root)[0];
+  absPath += "/";
+  absPath += it->second;
+
+  if (isDir(absPath.c_str()) || access(absPath.c_str(), R_OK))
+  {
+    _defaultErrorPage(errnum);
+    return 0;
+  }
+
+  std::fstream fs(absPath.c_str());
+
+  if (fs.fail())
+  {
+    _defaultErrorPage(errnum);
+    return 0;
+  }
+
+  std::stringstream ss;
+  ss << fs.rdbuf();
+  std::string body = ss.str();
+  size_t contentLength = body.length();
+
+  std::stringstream contentLengthStream;
+  contentLengthStream << contentLength;
+  std::string contentLengthStr = contentLengthStream.str();
+
+  _ErrResponse =
+    "HTTP/1.1 400 Bad Request\r\n"
+    "Content-Type: text/html; charset=UTF-8\r\n"
+    "Content-Length: " + contentLengthStr + "\r\n"
+    "\r\n"
+    + body;
+  return 0;
+}
 
 void Connection::setEvent()
 {

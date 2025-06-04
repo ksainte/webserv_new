@@ -12,6 +12,8 @@ class ConnectionManager;
 class Connection : public virtual IEventHandler, public Request, public IParser
 {
 
+  void _defaultErrorPage(int errnum);
+
   bool sendResponse();
 
   int send_to_cgi(const char * absPath);
