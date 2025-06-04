@@ -42,7 +42,9 @@ def process_multipart_form_data(environ, input_stream):
                         file_content = data_part.strip(b'\r\n--')
                         try:
                             sanitized_filename = os.path.basename(filename)
-                            filepath = f"uploaded_{sanitized_filename}"
+                            upload_dir = "uploads"
+                            os.makedirs(upload_dir, exist_ok=True)  # Ensure the uploads directory exists
+                            filepath = os.path.join(upload_dir, f"{sanitized_filename}")
                             with open(filepath, 'wb') as f:
                                 f.write(file_content)
                             response_parts.append(f"Uploaded file '{name}', saved as '{filepath}', size={len(file_content)} bytes.")
