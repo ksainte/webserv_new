@@ -294,7 +294,7 @@ int Connection::send_to_cgi(const char * absPath)
 
   if (MyReadFile.gcount() > 0)
   {
-    std::clog << "\nSent!\n";
+    // std::clog << "\nSent!\n";
     send(_clientFd, _buffer, MyReadFile.gcount(), 0);
     memset(_buffer, 0, sizeof(_buffer));
     // delete[] buffer;
