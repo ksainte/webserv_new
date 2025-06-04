@@ -94,7 +94,6 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       close(p->getFd());
       return 0;
     }
-    // _manager->unregisterEvent(p->getFd());
 
     if (_method == "POST")
     {
@@ -129,6 +128,31 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
         exit(1);
       }
       wait(NULL);
+      _manager->unregisterEvent(p->getFd());
+      close(p->getFd());
+    }
+    if (_method == "DELETE")
+    {
+      std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
+      str.append(_path);
+      std::clog << _path;
+      int result = remove(str.c_str());
+      if (result == 0)
+      {
+        const std::string e501 =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html; charset=UTF-8\r\n"
+        "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+        "Content-Length: 1234\r\n\r\n"    
+        "<html>"
+          "<body>"
+            "<h1>File file.html deleted.</h1>"
+          "</body>"
+        "</html>";
+        send(_clientFd, e501.c_str(), e501.size(), 0);
+      }
+      std::clog << result;
+      _manager->unregisterEvent(p->getFd());
       close(p->getFd());
     }
     else
@@ -219,6 +243,7 @@ bool Connection::sendResponse()
     "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
     "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
     "501 Not Implemented";
+    
 
   send(_clientFd, e501.c_str(), e501.size(), 0);
   close(_clientFd);
