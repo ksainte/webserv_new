@@ -12,16 +12,21 @@ class ConnectionManager;
 class Connection : public virtual IEventHandler, public Request, public IParser
 {
 
-  bool sendResponse() const;
-  int send_to_cgi(const std::string& absPath) const;
+  bool sendResponse();
+
+  int send_to_cgi(const char * absPath);
+  // int send_to_cgi(const std::string& absPath) const;
 
   Epoll* _manager;
   Searcher* _searcher;
   int _sockFd;
   int _clientFd;
   Event _event;
-
   std::string _ErrResponse;
+
+  //GET
+  std::ifstream MyReadFile;
+  char _buffer[4096];
 
   const std::string& getErrorMessage(int errnum);
 

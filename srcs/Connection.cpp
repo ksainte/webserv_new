@@ -88,23 +88,23 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       return 1;
     }
 
-    _manager->unregisterEvent(p->getFd());
-
-    std::string line;
-
-    line = _headers["content-type"];
-    std::string key_1 = "content-type=";
-    key_1.append(line);
-    const char* ct = key_1.c_str();
-    line = _headers["content-length"];
-    std::string key_2 = "content-length=";
-    key_2.append(line);
-    const char* cl = key_2.c_str();
-
-    int pid;
+    // _manager->unregisterEvent(p->getFd());
 
     if (_method == "POST")
     {
+      std::string line;
+
+      line = _headers["content-type"];
+      std::string key_1 = "content-type=";
+      key_1.append(line);
+      const char* ct = key_1.c_str();
+      line = _headers["content-length"];
+      std::string key_2 = "content-length=";
+      key_2.append(line);
+      const char* cl = key_2.c_str();
+
+      int pid;
+
       char* env[] =
       {
         const_cast<char*>(ct),
@@ -122,23 +122,18 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
         perror("execve: ");
         exit(1);
       }
+      wait(NULL);
+      close(p->getFd());
     }
     else
     {
-      pid = fork();
-      if (pid == 0)
-      {
         sendResponse();
-        exit(1);
-      }
     }
-    wait(NULL);
-    close(p->getFd());
   }
   return 0;
 }
 
-bool Connection::sendResponse() const
+bool Connection::sendResponse()
 {
   std::string root_directory;
 
@@ -170,7 +165,7 @@ bool Connection::sendResponse() const
   {
     if (!S_ISDIR(stats.st_mode))
     {
-      send_to_cgi(absPath);
+      send_to_cgi(absPath.c_str());
       return true;
     }
     else
@@ -198,55 +193,141 @@ bool Connection::sendResponse() const
 
         stat(tmp.c_str(), &stats);
 
-        if (!access(absPath.c_str(), F_OK)
+        if (!access(tmp.c_str(), F_OK)
           && !S_ISDIR(stats.st_mode))
         {
-          send_to_cgi(tmp);
+          send_to_cgi(tmp.c_str());
           return true;
         }
       }
     }
   }
-
-  const std::string e501 =
-    "HTTP/1.0 501 Not Implemented\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 19\r\n"
-    "Connection: close\r\n"
-    "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-    "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-    "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
-    "501 Not Implemented";
-
-  send(_sockFd, e501.c_str(), e501.size(), 0);
+  //
+  // const std::string e501 =
+  //   "HTTP/1.0 501 Not Implemented\r\n"
+  //   "Content-Type: text/plain\r\n"
+  //   "Content-Length: 19\r\n"
+  //   "Connection: close\r\n"
+  //   "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+  //   "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
+  //   "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
+  //   "501 Not Implemented";
+  //
+  // send(_sockFd, e501.c_str(), e501.size(), 0);
   return false;
 }
 
-int Connection::send_to_cgi(const std::string& absPath) const
+char *get_content_type(char *filename)
 {
-  char* arr[2] = {const_cast<char*>(absPath.c_str()), NULL};
+  char *file_path = strtok(filename, ".");
+  char *file_extension;
+  while (file_path != NULL) { // find the file extension
+    file_extension = file_path;
+    file_path      = strtok(NULL, " ");
+  }
 
-  setenv("QUERY_STRING", absPath.c_str(), 1);
+  // sets file extension to lowercase in order to compare strings
+  for (int i = 0; file_extension[i]; i++) {
+    file_extension[i] = tolower(file_extension[i]);
+  }
 
-  const int pid = fork();
-
-  if (pid != 0)
+  // comparing the strings to match with its corresponding type
+  if ((strcmp(file_extension, "jpeg") == 0) ||
+      (strcmp(file_extension, "jpg") == 0)) {
+    return "image/jpeg";
+      }
+  else if (strcmp(file_extension, "gif") == 0) {
+    return "image/gif";
+  }
+  else if ((strcmp(file_extension, "html") == 0) ||
+           (strcmp(file_extension, "htm") == 0)) {
+    return "text/html";
+           }
+  else if (strcmp(file_extension, "mp4") == 0)
   {
+    return "video/mp4";
+  }
+  else {
+    return "text/plain";
+  }
+}
+
+int Connection::send_to_cgi(const char * absPath)
+{
+  static int flag;
+
+  if (MyReadFile.gcount() == 0 && flag == 0)
+  {
+    MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
+    std::clog << MyReadFile.tellg() << "\n";
+    int fileLenght = MyReadFile.tellg();
+    MyReadFile.seekg(0, MyReadFile.beg);
+    char *contentType = get_content_type((char*)absPath);
+
+    std::ostringstream headers;
+    headers << "HTTP/1.1 200 OK\r\n"
+        << "Content-Length: " << fileLenght << "\r\n"
+        << "Content-Type: " << contentType << "\r\n"
+        << "Connection: keep-alive\r\n"
+        << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+        << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
+    std::string headers_buff = headers.str();
+
+    send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
+    flag = 1;
+    return (0);
+  }
+
+  MyReadFile.read (_buffer, sizeof(_buffer));
+
+  if (MyReadFile.gcount() > 0)
+  {
+    std::clog << "\nSent!\n";
+    send(_clientFd, _buffer, MyReadFile.gcount(), 0);
+    memset(_buffer, 0, sizeof(_buffer));
+    // delete[] buffer;
+    return 0;
+  }
+  else
+  {
+    std::clog << "\nEnd of file!!\n";
+    MyReadFile.close();
+    _manager->unregisterEvent(_clientFd);
     close(_clientFd);
+    flag = 0;
+    memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
 
-  close(1);
-  dup2(_clientFd, 1);
 
-  const int result = execv("./cgi-bin/GET.cgi", arr);
-
-  if (result < 0)
-  {
-    std::cout << "result false\n";
-  }
-  exit(1);
 }
+
+
+// int Connection::send_to_cgi(const std::string& absPath) const
+// {
+//   char* arr[2] = {const_cast<char*>(absPath.c_str()), NULL};
+//
+//   setenv("QUERY_STRING", absPath.c_str(), 1);
+//
+//   const int pid = fork();
+//
+//   if (pid != 0)
+//   {
+//     close(_clientFd);
+//     return 0;
+//   }
+//
+//   close(1);
+//   dup2(_clientFd, 1);
+//
+//   const int result = execv("./cgi-bin/GET.cgi", arr);
+//
+//   if (result < 0)
+//   {
+//     std::cout << "result false\n";
+//   }
+//   exit(1);
+// }
 
 bool Connection::supportedVersion(const std::string& version) const
 {
