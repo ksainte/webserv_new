@@ -142,7 +142,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       {
         dup2(_clientFd, STDIN_FILENO);
         dup2(_clientFd, STDOUT_FILENO);
-        execve("cgi.py", (char*[]){"cgi.py", NULL}, env);
+        execve("cgi-bin/cgi.py", (char*[]){"cgi-bin/cgi.py", NULL}, env);
         perror("execve: ");
         exit(1);
       }
