@@ -175,22 +175,27 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     }
     else
     {
-        sendResponse();
+      
+      if (isPathValid() && pathIsValid == 0)
+      {
+        //le get est cgi ou pas?
+        pathIsValid = 1;
+        readFILE(absPath.c_str());
+      }
+      else if(pathIsValid == 1)
+      {
+        readFILE(absPath.c_str());
+      }
     }
   }
   return 0;
 }
 
-bool Connection::sendResponse()
+bool Connection::isPathValid()
 {
   std::string root_directory;
 
-  std::string host;
-  const HeaderIt it = _headers.find("host");
-  if (it != _headers.end())
-    host = it->second;
-
-  const LocationBlock* location = _searcher->getLocation(_sockFd, host, _path.c_str());
+  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
   if (!location)
   {
     std::clog << "\nroute is not valid\n";
@@ -199,7 +204,7 @@ bool Connection::sendResponse()
 
   const std::string prefix(location->getPrefix());
 
-  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", host, prefix.c_str());
+  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
   {
     std::clog << "root is not valid\n";
@@ -207,14 +212,13 @@ bool Connection::sendResponse()
   }
 
   struct stat stats = {};
-  std::string absPath = (*p)[0];
+  absPath = (*p)[0];
   stat(absPath.c_str(), &stats);
 
   if (!access(absPath.c_str(), F_OK))
   {
     if (!S_ISDIR(stats.st_mode))
     {
-      send_to_cgi(absPath.c_str());
       return true;
     }
     else
@@ -226,12 +230,11 @@ bool Connection::sendResponse()
     {
       if (!S_ISDIR(stats.st_mode))
       {
-        send_to_cgi(absPath.c_str());
         return true;
       }
     }
 
-    p = _searcher->findLocationDirective(_sockFd, "index", host, prefix.c_str());
+    p = _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
     if (p)
     {
       for (ConfigType::DirectiveValueIt it = p->begin(); it != p->end(); ++it)
@@ -245,7 +248,7 @@ bool Connection::sendResponse()
         if (!access(tmp.c_str(), F_OK)
           && !S_ISDIR(stats.st_mode))
         {
-          send_to_cgi(tmp.c_str());
+          absPath = tmp;
           return true;
         }
       }
@@ -308,14 +311,13 @@ char *get_content_type(char *filename)
   }
 }
 
-int Connection::send_to_cgi(const char * absPath)
+int Connection::readFILE(const char * absPath)
 {
   static int flag;
 
   if (MyReadFile.gcount() == 0 && flag == 0)
   {
     MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
-    std::clog << MyReadFile.tellg() << "\n";
     int fileLenght = MyReadFile.tellg();
     MyReadFile.seekg(0, MyReadFile.beg);
     char *contentType = get_content_type((char*)absPath);
@@ -351,6 +353,7 @@ int Connection::send_to_cgi(const char * absPath)
     _manager->unregisterEvent(_clientFd);
     close(_clientFd);
     flag = 0;
+    pathIsValid = 0;
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
