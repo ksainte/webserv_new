@@ -76,6 +76,117 @@ void Connection::checkBodySize() const
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
+
+bool Connection::isGetRequestaCGI()
+{
+  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
+  if (!location)
+  {
+    std::clog << "\nroute is not valid\n";
+    return false;
+  }
+
+  const std::string prefix(location->getPrefix());
+
+  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
+  if (!p || p[0].empty())
+  {
+    std::clog << "root is not valid\n";
+    return false;
+  }
+
+  struct stat stats = {};
+  cgiPath = (*p)[0];
+  p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
+  if (!p || p[0].empty())
+  {
+    std::clog << "root is not valid\n";
+    return false;
+  }
+  cgiPath.append("/");
+  cgiPath.append((*p)[0]);
+  std::cout << "\ncgiPath is " << cgiPath << "\n";
+  stat(cgiPath.c_str(), &stats);
+
+  if (!access(cgiPath.c_str(), X_OK))//exists and grants execution permissions!
+  {
+    if (!S_ISDIR(stats.st_mode))
+    {
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+
+bool Connection::prepareEnvForGetCGI()
+{
+  //typedef std::list<std::pair<std::string, std::string> > CgiParams;
+  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
+  if (!location)
+  {
+    std::clog << "\nroute is not valid\n";
+    return false;
+  }
+
+  const ConfigType::CgiParams &p = location->getCgiParams();
+  int size = p.size();
+  if (!size)
+  {
+    return false;
+    //create artificial env
+    // iterate as above
+  }
+  char *env[size + 2];
+  int i = 0;
+  for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it) 
+  {
+      // std::cout << "first is \n" << it->first << "\n";
+      // std::cout << "second is \n" << it->second << "\n";
+      std::string keyValuePair = it->first;
+      keyValuePair.append("=");
+      keyValuePair.append(it->second);
+      const char* ct = keyValuePair.c_str();
+      env[i] = strdup(const_cast<char*>(ct));
+      std::cout << "\n" << env[i] << "\n";
+      i++;
+  }
+  std::string queryStr = "QUERY_STRING=" + absPath;
+  env[i] = strdup(queryStr.c_str());
+  i++;
+  env[i] = NULL;
+
+  std::cout << "path is " << absPath << "\n";
+  setenv("QUERY_STRING", absPath.c_str(), 1);
+
+  int pid;
+
+  pid = fork();
+
+  if (pid == 0)
+  {
+    close(1);
+    dup2(_clientFd, 1);
+    execve("./contents/GET.cgi", (char*[]){"./contents/GET.cgi", NULL}, env);//a remplacer avec cgi path
+    // execve(cgiPath.c_str(), (char*[]){const_cast<char*>(cgiPath.c_str()), NULL}, env);//a remplacer avec cgi path
+    perror("execve: ");
+    exit(1);
+  }
+  // else
+  // {
+
+  //   close(_clientFd);
+  //   _manager->unregisterEvent(_clientFd);
+  //   return false;
+  // }
+  wait(NULL);
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  return true;
+}
+
+
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN)
@@ -191,7 +302,13 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       if (isPathValid() && pathIsValid == 0)
       {
         //le get est cgi ou pas? si oui ca va execve ici, si non on continue vers readFile!
-        // isGetRequestaCGI();
+        if (isGetRequestaCGI())
+        {
+          std::clog << "\nis cgi\n";
+          prepareEnvForGetCGI();
+          std::clog << "\nend of cgi\n";
+          return 0;
+        }
         pathIsValid = 1;
         readFILE(absPath.c_str());
       }
@@ -206,7 +323,6 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
 
 bool Connection::isPathValid()
 {
-  std::string root_directory;
 
   const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
   if (!location)

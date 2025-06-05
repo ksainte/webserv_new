@@ -16,7 +16,7 @@ class Connection : public virtual IEventHandler, public Request, public IParser
 
   // bool sendResponse();
   bool isPathValid();
-
+  bool isGetRequestaCGI();
   int send_to_cgi(const char * absPath);
   int readFILE(const char * absPath);
 
@@ -32,7 +32,9 @@ class Connection : public virtual IEventHandler, public Request, public IParser
   Event _event;
   std::string _ErrResponse;
   std::string absPath;
+  std::string cgiPath;
   int         pathIsValid;
+  bool prepareEnvForGetCGI();
 
   //GET
   std::ifstream MyReadFile;
