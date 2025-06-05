@@ -5,59 +5,54 @@
 #include <time.h>
 #include <unistd.h>
 
-char* get_content_type(char* filename)
+char *get_content_type(char *filename)
 {
-  char* file_path = strtok(filename, ".");
-  char* file_extension;
-  while (file_path != NULL)
-  {
-    // find the file extension
+  char *file_path = strtok(filename, ".");
+  char *file_extension;
+  while (file_path != NULL) { // find the file extension
     file_extension = file_path;
-    file_path = strtok(NULL, " ");
+    file_path      = strtok(NULL, " ");
   }
 
   // sets file extension to lowercase in order to compare strings
-  for (int i = 0; file_extension[i]; i++)
-  {
+  for (int i = 0; file_extension[i]; i++) {
     file_extension[i] = tolower(file_extension[i]);
   }
 
   // comparing the strings to match with its corresponding type
   if ((strcmp(file_extension, "jpeg") == 0) ||
-    (strcmp(file_extension, "jpg") == 0))
-  {
+      (strcmp(file_extension, "jpg") == 0)) {
     return "image/jpeg";
   }
-  else if (strcmp(file_extension, "gif") == 0)
-  {
+  else if (strcmp(file_extension, "gif") == 0) {
     return "image/gif";
   }
   else if ((strcmp(file_extension, "html") == 0) ||
-    (strcmp(file_extension, "htm") == 0))
-  {
+           (strcmp(file_extension, "htm") == 0)) {
     return "text/html";
   }
-  else
-  {
+  else {
     return "text/plain";
   }
 }
 
-int main(void)
+int main(int argc, char **argv, char **envp)
 {
   char *data, path[2048], time_buffer[256];
   data = getenv("QUERY_STRING");
   // printf("data is %s\n", data);
   // printf("------------------");
+  for (int i=0; envp[i]!=NULL; i++) {
+    printf("%d: %s\n", i, envp[i]);
+}
 
   strcpy(path, data);
 
-  time_t now = time(0);
+  time_t now   = time(0);
   struct tm tm = *gmtime(&now);
   strftime(time_buffer, sizeof(time_buffer), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 
-  if (access(data, F_OK) < 0)
-  {
+  if (access(data, F_OK) < 0) {
     // This should not happen, but just in case if the file doesn't exist
     printf("HTTP/1.0 404 Not Found\n");
     printf("Content-Type: text/plain\n");
@@ -69,9 +64,9 @@ int main(void)
     return -1;
   }
 
-  char* content_type = get_content_type(data);
+  char *content_type = get_content_type(data);
 
-  FILE* filePointer = fopen(path, "rb"); // open existing binary picture
+  FILE *filePointer = fopen(path, "rb"); // open existing binary picture
   unsigned long file_length;
 
   fseek(filePointer, 0, SEEK_END);
