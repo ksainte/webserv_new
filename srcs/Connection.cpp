@@ -310,8 +310,7 @@ char* get_content_type(char* filename)
   else if (strcmp(file_extension, "gif") == 0)
   {
     return "image/gif";
-  }  bool sendResponse();
-
+  }
   else if ((strcmp(file_extension, "html") == 0) ||
     (strcmp(file_extension, "htm") == 0))
   {
