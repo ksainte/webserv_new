@@ -138,7 +138,7 @@ bool Connection::prepareEnvForGetCGI()
     //create artificial env
     // iterate as above
   }
-  char *env[size + 1];
+  char *env[size + 2];
   int i = 0;
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it) 
   {
@@ -148,11 +148,15 @@ bool Connection::prepareEnvForGetCGI()
       keyValuePair.append("=");
       keyValuePair.append(it->second);
       const char* ct = keyValuePair.c_str();
-      env[i] = const_cast<char*>(ct);
+      env[i] = strdup(const_cast<char*>(ct));
       std::cout << "\n" << env[i] << "\n";
       i++;
   }
+  std::string queryStr = "QUERY_STRING=" + absPath;
+  env[i] = strdup(queryStr.c_str());
+  i++;
   env[i] = NULL;
+
   std::cout << "path is " << absPath << "\n";
   setenv("QUERY_STRING", absPath.c_str(), 1);
 
@@ -164,17 +168,14 @@ bool Connection::prepareEnvForGetCGI()
   {
     close(1);
     dup2(_clientFd, 1);
-    // execve("./contents/GET.cgi", (char*[]){"./contents/GET.cgi", NULL}, env);//a remplacer avec cgi path
-    const int result = execv("./contents/GET.cgi", env);
-    if (result < 0)
-    {
-      std::cout << "result false\n";
-    }
+    execve("./contents/GET.cgi", (char*[]){"./contents/GET.cgi", NULL}, env);//a remplacer avec cgi path
+    // execve(cgiPath.c_str(), (char*[]){const_cast<char*>(cgiPath.c_str()), NULL}, env);//a remplacer avec cgi path
     perror("execve: ");
     exit(1);
   }
   // else
   // {
+
   //   close(_clientFd);
   //   _manager->unregisterEvent(_clientFd);
   //   return false;

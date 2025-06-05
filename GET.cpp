@@ -36,15 +36,18 @@ char *get_content_type(char *filename)
   }
 }
 
+extern char **environ;
+
 int main(int argc, char **argv, char **envp)
 {
   char *data, path[2048], time_buffer[256];
-  data = getenv("QUERY_STRING");
-  // printf("data is %s\n", data);
-  // printf("------------------");
-  for (int i=0; envp[i]!=NULL; i++) {
-    printf("%d: %s\n", i, envp[i]);
-}
+  data = std::getenv("QUERY_STRING");
+
+  // for (int i=0; environ[i]!=NULL; i++) proof that is passed!
+  // {
+  //   printf("%d: %s\n", i, envp[i]);
+  // }
+
 
   strcpy(path, data);
 
