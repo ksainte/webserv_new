@@ -26,10 +26,16 @@ ConnectionManager::ConnectionManager(Searcher &searcher, Epoll& eventManager):
 _eventManager(eventManager),
 _searcher(searcher)
 {
-	for (int i = 0; i < MAX_CONN; ++i) {
-		connection[i] = Connection(searcher, eventManager);
+	// Initialize connections safely
+	try {
+		for (int i = 0; i < MAX_CONN; ++i) {
+			connection[i] = Connection(searcher, eventManager);
+		}
+		LOG_DEBUG << "Connection Manager created\n";
+	} catch (const std::exception& e) {
+		LOG_DEBUG << "Failed to initialize Connection Manager: " << e.what() << "\n";
+		throw; // Re-throw to let caller handle
 	}
-	LOG_DEBUG << "Connection Manager created\n";
 }
 
 ConnectionManager::~ConnectionManager()

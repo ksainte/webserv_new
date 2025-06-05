@@ -9,13 +9,15 @@
 class Epoll;
 class ConnectionManager;
 
-class Connection : public virtual IEventHandler, public Request, public IParser
+class Connection : public virtual IEventHandler, public Request
 {
 
   void _defaultErrorPage(int errnum);
+  bool _checkDefaultFileAccess(const std::string& prefix);
+  void _isPathValid();
+  void _isMethodAllowed() const;
+  static void _isHttpVersionSupported(const std::string& version) ;
 
-  // bool sendResponse();
-  bool isPathValid();
   bool isGetRequestaCGI();
   int send_to_cgi(const char * absPath);
   int readFILE(const char * absPath);
@@ -23,7 +25,7 @@ class Connection : public virtual IEventHandler, public Request, public IParser
   void  checkBodySize() const;
 
   // 50MB
-  static const int _defaultMaxBodySize = 50000000;
+  static const int _defaultMaxBodySize = 50 * 1000 * 1000;
 
   Epoll* _manager;
   Searcher* _searcher;
@@ -33,7 +35,6 @@ class Connection : public virtual IEventHandler, public Request, public IParser
   std::string _ErrResponse;
   std::string absPath;
   std::string cgiPath;
-  int         pathIsValid;
   bool prepareEnvForGetCGI();
 
   //GET
@@ -61,11 +62,6 @@ public:
   Connection(const Connection& other);
   Connection& operator=(const Connection& other);
   ~Connection();
-
-  // Helper to parse request first line
-  bool validPath(const std::string& path) const;
-  bool supportedVersion(const std::string& version) const;
-  bool allowedMethod(const std::string& method) const;
 
   int handleError(int errnum);
   int handleEvent(const Event* p, unsigned int flags);

@@ -8,7 +8,9 @@
 
 void signalHandler(const int sigNum)
 {
-  if (sigNum == SIGINT)
+  if (sigNum == SIGINT 
+	|| sigNum == SIGTERM
+	|| sigNum == SIGQUIT)
   {
     // Recover a static bool
     bool& sigInt = getSigIntFlag();
@@ -18,22 +20,25 @@ void signalHandler(const int sigNum)
 
 int main()
 {
-  // Init sigInt handler
+  // Init signal handler
   signal(SIGINT, signalHandler);
+  signal(SIGTERM, signalHandler);
+  signal(SIGQUIT, signalHandler);
+  
   try
   {
-    const Tokenizer tokenizer("configFile/searchTest.config");
+    const Tokenizer tokenizer("configFile/single-server.config");
     const Config config(tokenizer.ft_get_token_list());
     Searcher searcher(config);
     Epoll eventManager;
-    ConnectionManager connManager(searcher, eventManager);
-    Listener listener(searcher.getAddresses(), eventManager, connManager);
-
-    eventManager.wait();
+	ConnectionManager connManager(searcher, eventManager);
+	Listener listener(searcher.getAddresses(), eventManager, connManager);
+	eventManager.wait();
   }
-  catch (std::exception& e)
+  catch (const std::exception& e)
   {
     return 1;
   }
+  
   return 0;
 }

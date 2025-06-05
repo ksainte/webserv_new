@@ -17,8 +17,11 @@ Connection::Connection():
   _manager(NULL),
   _searcher(NULL),
   _sockFd(-1),
-  _clientFd(-1)
+  _clientFd(-1),
+  MyReadFile() // Explicitly initialize ifstream
 {
+  // Clear the buffer
+  memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
 
@@ -26,8 +29,11 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
   _sockFd(-1),
-  _clientFd(-1)
+  _clientFd(-1),
+  MyReadFile() // Explicitly initialize ifstream
 {
+  // Clear the buffer
+  memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
 
@@ -55,6 +61,15 @@ Connection& Connection::operator=(const Connection& other)
 
 Connection::~Connection()
 {
+  // Safely close the file stream if open
+  try {
+    if (MyReadFile.is_open()) {
+      MyReadFile.close();
+    }
+  } catch (...) {
+    // Ignore exceptions during destruction
+  }
+  
   LOG_DEBUG << "Connection destroyed\n";
 }
 
@@ -75,7 +90,6 @@ void Connection::checkBodySize() const
   if (val && bodySize((*val)[0]) < requestBodySize)
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
-
 
 bool Connection::isGetRequestaCGI()
 {
@@ -186,6 +200,21 @@ bool Connection::prepareEnvForGetCGI()
   return true;
 }
 
+void Connection::_isMethodAllowed() const
+{
+  const ConfigType::DirectiveValue* methods =
+    _searcher->findLocationDirective(_sockFd, "method", _host, _path);
+
+  // By default, all methods are allowed
+  if (!methods) return;
+
+  ConfigType::DirectiveValueIt it = methods->begin();
+
+  for (;it != methods->end() && _method != *it; ++it) {}
+
+  if (it == methods->end())
+    throw Exception(ErrorMessages::E_BAD_METHOD, 400);
+}
 
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
@@ -195,6 +224,14 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     {
       extractHeaders(_clientFd);
       storeHeaders();
+
+      // Store host header separately since we call it often
+      const HeaderIt it = _headers.find("host");
+      if (it != _headers.end())
+        _host = it->second;
+
+      _isMethodAllowed();
+      _isPathValid();
       checkBodySize();
     }
     catch (Exception& e)
@@ -203,11 +240,6 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       handleError(e.errnum());
     }
 
-    const HeaderIt it = _headers.find("host");
-    if (it != _headers.end())
-      _host = it->second;
-
-    // setEnv();
     _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
     return 0;
   }
@@ -216,21 +248,6 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     if (!_ErrResponse.empty())
     {
       send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-      return 0;
-    }
-
-    if (_path == "/favicon.ico")
-    {
-      const std::string res =
-        "HTTP/1.0 404 Not Found\r\n"
-        "Content-Type: text/plain\r\n"
-        "Connection: close\r\n"
-        "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-        "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-        "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n";
-      send(_clientFd, res.c_str(), res.size(), 0);
       _manager->unregisterEvent(p->getFd());
       close(p->getFd());
       return 0;
@@ -298,106 +315,86 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     }
     else
     {
-
-      if (isPathValid() && pathIsValid == 0)
+      if (isGetRequestaCGI())
       {
-        //le get est cgi ou pas? si oui ca va execve ici, si non on continue vers readFile!
-        if (isGetRequestaCGI())
-        {
-          std::clog << "\nis cgi\n";
-          prepareEnvForGetCGI();
-          std::clog << "\nend of cgi\n";
-          return 0;
-        }
-        pathIsValid = 1;
-        readFILE(absPath.c_str());
+        std::clog << "\nis cgi\n";
+        prepareEnvForGetCGI();
+        std::clog << "\nend of cgi\n";
+        return 0;
       }
-      else if(pathIsValid == 1)
-      {
-        readFILE(absPath.c_str());
-      }
+      readFILE(absPath.c_str());
     }
   }
   return 0;
 }
 
-bool Connection::isPathValid()
+bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 {
+  const ConfigType::DirectiveValue* index =
+    _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
 
-  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
-  if (!location)
+  if (!index) return false;
+
+  for (ConfigType::DirectiveValueIt it = index->begin(); it != index->end(); ++it)
   {
-    std::clog << "\nroute is not valid\n";
-    return false;
+    std::string tmp(absPath);
+    tmp.append("/");
+    tmp.append(*it);
+
+    if (!access(tmp.c_str(), R_OK)
+      && !isDir(tmp.c_str()))
+    {
+      absPath = tmp;
+      return true;
+    }
   }
+
+  return false;
+}
+
+void Connection::_isPathValid()
+{
+  const LocationBlock* location =
+    _searcher->getLocation(_sockFd, _host, _path);
+
+  if (!location)
+    throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
 
   const std::string prefix(location->getPrefix());
 
-  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
-  if (!p || p[0].empty())
-  {
-    std::clog << "root is not valid\n";
-    return false;
-  }
+  const ConfigType::DirectiveValue* root =
+    _searcher->findLocationDirective(_sockFd, "root", _host, prefix);
 
-  struct stat stats = {};
-  absPath = (*p)[0];
-  stat(absPath.c_str(), &stats);
+  if (!root || root->empty())
+    throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
-  if (!access(absPath.c_str(), F_OK))
-  {
-    if (!S_ISDIR(stats.st_mode))
-    {
-      return true;
-    }
-    else
-      absPath.append(_path.substr(strlen(prefix.c_str())));
+  // absPath is the vector first item
+  absPath = (*root)[0];
 
-    stat(absPath.c_str(), &stats);
+  // if absPath is not already not valid
+  // we send a 404 not found error
+  if (access(absPath.c_str(), R_OK))
+    throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
-    if (!access(absPath.c_str(), F_OK))
-    {
-      if (!S_ISDIR(stats.st_mode))
-      {
-        return true;
-      }
-    }
+  // If absPath is a valid path in the filesystem
+  // we send the file
+  if (!isDir(absPath.c_str())) return;
 
-    p = _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
-    if (p)
-    {
-      for (ConfigType::DirectiveValueIt it = p->begin(); it != p->end(); ++it)
-      {
-        std::string tmp(absPath);
-        tmp.append("/");
-        tmp.append(*it);
+  // If not we append the uri to absPath
+  absPath.append(_path.substr(strlen(prefix.c_str())));
 
-        stat(tmp.c_str(), &stats);
+  // If absPath + uri is a valid file
+  // we send it
+  if (prefix != _path
+      && !access(absPath.c_str(), F_OK)
+      && !isDir(absPath.c_str()))
+      return;
 
-        if (!access(tmp.c_str(), F_OK)
-          && !S_ISDIR(stats.st_mode))
-        {
-          absPath = tmp;
-          return true;
-        }
-      }
-    }
-  }
+  // We check default file access
+  // until one is valid, or we reach vector end
+  if (_checkDefaultFileAccess(prefix)) return;
 
-  _manager->unregisterEvent(_clientFd);
-  const std::string e501 =
-    "HTTP/1.0 501 Not Implemented\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 19\r\n"
-    "Connection: close\r\n"
-    "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-    "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n"
-    "Date: Mon, 23 Mar 2020 04:49:28 GMT\n\n"
-    "501 Not Implemented";
-
-  send(_clientFd, e501.c_str(), e501.size(), 0);
-  close(_clientFd);
-  return false;
+  throw Exception(ErrorMessages::E_BAD_PATH, 404);
 }
 
 char* get_content_type(char* filename)
@@ -475,74 +472,25 @@ int Connection::readFILE(const char * absPath)
 
   if (MyReadFile.gcount() > 0)
   {
-    // std::clog << "\nSent!\n";
     send(_clientFd, _buffer, MyReadFile.gcount(), 0);
     memset(_buffer, 0, sizeof(_buffer));
-    // delete[] buffer;
     return 0;
   }
-  else
-  {
-    std::clog << "\nEnd of file!!\n";
-    MyReadFile.close();
-    _manager->unregisterEvent(_clientFd);
-    close(_clientFd);
-    flag = 0;
-    pathIsValid = 0;
-    memset(_buffer, 0, sizeof(_buffer));
-    return 0;
-  }
+
+  std::clog << "\nEnd of file!!\n";
+  MyReadFile.close();
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  flag = 0;
+  memset(_buffer, 0, sizeof(_buffer));
+  return 0;
 }
 
-// int Connection::send_to_cgi(const std::string& absPath) const
-// {
-//   char* arr[2] = {const_cast<char*>(absPath.c_str()), NULL};
-//
-//   setenv("QUERY_STRING", absPath.c_str(), 1);
-//
-//   const int pid = fork();
-//
-//   if (pid != 0)
-//   {
-//     close(_clientFd);
-//     return 0;
-//   }
-//
-//   close(1);
-//   dup2(_clientFd, 1);
-//
-//   const int result = execv("./cgi-bin/GET.cgi", arr);
-//
-//   if (result < 0)
-//   {
-//     std::cout << "result false\n";
-//   }
-//   exit(1);
-// }
-
-bool Connection::supportedVersion(const std::string& version) const
+void Connection::_isHttpVersionSupported(const std::string& version)
 {
-  return version == "HTTP/1.1" || version == "HTTP/1.0" || version == "HTTP/0.9";
-}
-
-bool Connection::validPath(const std::string& path) const
-{
-  const LocationBlock* loc = _searcher->getLocation(_clientFd, _host, path);
-  return loc != NULL;
-}
-
-bool Connection::allowedMethod(const std::string& method) const
-{
-  const ConfigType::DirectiveValue* allowedMethods =
-    _searcher->findLocationDirective(_clientFd, "method", _host, _path);
-
-  // Means all methods are allowed by default
-  if (!allowedMethods) return true;
-
-  const ConfigType::DirectiveValueIt it =
-    std::find(allowedMethods->begin(), allowedMethods->end(), method);
-
-  return it != allowedMethods->end();
+  if (version == "HTTP/1.1" || version == "HTTP/1.0" || version == "HTTP/0.9")
+    return;
+  throw Exception(ErrorMessages::E_HTTP_VERSION, 400);
 }
 
 const std::string& Connection::getErrorMessage(const int errnum)

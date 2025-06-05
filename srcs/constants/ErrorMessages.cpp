@@ -21,6 +21,15 @@ const char* ErrorMessages::E_BAD_TYPE =
 const char* ErrorMessages::E_BAD_ROUTE =
 "invalid route";
 
+const char* ErrorMessages::E_BAD_PATH =
+  "invalid path";
+
+const char* ErrorMessages::E_HTTP_VERSION =
+  "HTTP version not supported";
+
+const char* ErrorMessages::E_BAD_METHOD =
+  "Method not allowed";
+
 const char* ErrorMessages::E_EPOLL_INIT =
 "error during epoll instance initialization";
 

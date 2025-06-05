@@ -9,6 +9,9 @@ class ErrorMessages {
 		static const char* E_BAD_ARG;
 		static const char* E_BAD_TYPE;
 		static const char* E_BAD_ROUTE;
+		static const char* E_BAD_PATH;
+		static const char* E_BAD_METHOD;
+		static const char* E_HTTP_VERSION;
 		static const char* E_EPOLL_INIT;
 		static const char* E_EPOLL_CTL_ADD;
 		static const char* E_EPOLL_CTL_MOD;

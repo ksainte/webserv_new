@@ -15,7 +15,7 @@ public:
 private:
   const Epoll& _eventManager;
   const Searcher& _searcher;
-  static const int MAX_CONN = 500;
+  static const int MAX_CONN = 200;
   static int _numCon;
   Connection connection[MAX_CONN];
 };
