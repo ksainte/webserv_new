@@ -13,7 +13,7 @@ public:
   Listener(const std::list<std::pair<int, int> >& addresses, Epoll& eventManager, ConnectionManager& connManager);
   ~Listener();
   int handleEvent(const Event* event, unsigned int flags);
-  int handleError(int errnum);
+  void handleError(int errnum);
 
 private:
   static const int SOCK_MAX = 10;

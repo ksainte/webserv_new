@@ -5,7 +5,7 @@ class Event;
 class IEventHandler
 {
 public:
-  virtual int handleError(int errnum) = 0;
+  virtual void handleError(int errnum) = 0;
   virtual int handleEvent(const Event* p, unsigned int flags) = 0;
   virtual ~IEventHandler();
 };

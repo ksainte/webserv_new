@@ -71,7 +71,7 @@ public:
   const CgiParams& getCgiParams() const;
   void addCgiParams(std::string first, std::string last);
 
-  const ErrorPage& getErrorPages() const;
+  const ErrorPage* getErrorPages() const;
   void	addErrorPage(std::list<Token>::const_iterator first, std::list<Token>::const_iterator last);
 
   virtual const DirectiveMap& getDirectives() const;

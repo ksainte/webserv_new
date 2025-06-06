@@ -4,13 +4,7 @@ TODO
 
 request.cpp     add _queryString for query parameter
 
-unregsiterEvent check if epoll_ctl call failed
-
 bodySize        we should handle all suffixe as string not char 
-
-connection.cpp:handleError  errorPages must be also set in location block, not only in serverBlock;
-
-handleError doesnt need a return value
 
 access    if root is not set, we must also check relative path
 

@@ -63,7 +63,7 @@ public:
   Connection& operator=(const Connection& other);
   ~Connection();
 
-  int handleError(int errnum);
+  void handleError(int errnum);
   int handleEvent(const Event* p, unsigned int flags);
 
   int getSockFd() const;

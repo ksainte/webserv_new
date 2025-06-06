@@ -9,9 +9,9 @@ public:
   Epoll();
   ~Epoll();
 
-  int registerEvent(int eventFlags, Event* ptr) const;
-  int modifyEvent(int eventFlags, Event* ptr) const;
-  int unregisterEvent(int fd) const;
+  int   registerEvent(int eventFlags, Event* ptr) const;
+  int   modifyEvent(int eventFlags, Event* ptr) const;
+  void  unregisterEvent(int fd) const;
 
   void wait();
 
@@ -22,6 +22,6 @@ public:
 private:
   int _epfd;
   static const int SIZE = 1024;
-  struct epoll_event _events[SIZE];
+  epoll_event _events[SIZE];
 };
 #endif
