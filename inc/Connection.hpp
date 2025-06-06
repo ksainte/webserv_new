@@ -30,7 +30,6 @@ class Connection : public virtual IEventHandler, public Request
   Epoll* _manager;
   Searcher* _searcher;
   int _sockFd;
-  int _clientFd;
   Event _event;
   std::string _ErrResponse;
   std::string absPath;
@@ -68,7 +67,6 @@ public:
   int handleEvent(const Event* p, unsigned int flags);
 
   int getSockFd() const;
-  int getClientFd() const;
   Searcher* getSearcher() const;
   Epoll* getManager() const;
   Event* getEvent();

@@ -4,13 +4,9 @@ TODO
 
 request.cpp     add _queryString for query parameter
 
-request.cpp     store _clientFd inside request instead of connection
-
 unregsiterEvent check if epoll_ctl call failed
 
 bodySize        we should handle all suffixe as string not char 
-
-config-file     implement max body size
 
 connection.cpp:handleError  errorPages must be also set in location block, not only in serverBlock;
 

@@ -17,8 +17,7 @@ Connection::Connection():
   _manager(NULL),
   _searcher(NULL),
   _sockFd(-1),
-  _clientFd(-1),
-  MyReadFile() // Explicitly initialize ifstream
+_buffer()
 {
   // Clear the buffer
   memset(_buffer, 0, sizeof(_buffer));
@@ -28,9 +27,8 @@ Connection::Connection():
 Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
-  _sockFd(-1),
-  _clientFd(-1),
-  MyReadFile() // Explicitly initialize ifstream
+  _buffer(),
+  _sockFd(-1)
 {
   // Clear the buffer
   memset(_buffer, 0, sizeof(_buffer));
@@ -42,7 +40,7 @@ Connection::Connection(const Connection& other):
   _manager(other.getManager()),
   _searcher(other.getSearcher()),
   _sockFd(other.getSockFd()),
-  _clientFd(other.getClientFd())
+  _buffer()
 {
   LOG_DEBUG << "Connection copied\n";
 }
@@ -54,7 +52,6 @@ Connection& Connection::operator=(const Connection& other)
   _manager = other.getManager();
   _searcher = other.getSearcher();
   _sockFd = other.getSockFd();
-  _clientFd = other.getClientFd();
   _headers = other.getHeaders();
   return *this;
 }
@@ -208,7 +205,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   {
     try
     {
-      extractHeaders(_clientFd);
+      extractHeaders();
       storeHeaders();
       _isMethodAllowed();
       _isPathValid();
@@ -591,6 +588,5 @@ void Connection::setSockFd(int sockFd) { _sockFd = sockFd; }
 void Connection::setClientFd(int clientFd) { _clientFd = clientFd; }
 Event* Connection::getEvent() { return &_event; }
 int Connection::getSockFd() const { return _sockFd; }
-int Connection::getClientFd() const { return _clientFd; }
 Epoll* Connection::getManager() const { return _manager; }
 Searcher* Connection::getSearcher() const { return _searcher; }
