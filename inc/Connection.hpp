@@ -22,7 +22,7 @@ class Connection : public virtual IEventHandler, public Request
   int send_to_cgi(const char * absPath);
   int readFILE(const char * absPath);
 
-  void  checkBodySize() const;
+  void  _checkBodySize() const;
 
   // 50MB
   static const int _defaultMaxBodySize = 50 * 1000 * 1000;
@@ -49,6 +49,7 @@ class Connection : public virtual IEventHandler, public Request
     m[401] = "401 Unauthorized";
     m[403] = "403 Forbidden";
     m[404] = "404 Not Found";
+    m[405] = "405 Method Not Allowed";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
     m[502] = "502 Bad Gateway";

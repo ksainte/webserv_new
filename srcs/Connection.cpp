@@ -72,7 +72,7 @@ Connection::~Connection()
   LOG_DEBUG << "Connection destroyed\n";
 }
 
-void Connection::checkBodySize() const
+void Connection::_checkBodySize() const
 {
   const HeaderIt it = _headers.find("content-length");
 
@@ -223,15 +223,9 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     {
       extractHeaders(_clientFd);
       storeHeaders();
-
-      // Store host header separately since we call it often
-      const HeaderIt it = _headers.find("host");
-      if (it != _headers.end())
-        _host = it->second;
-
       _isMethodAllowed();
       _isPathValid();
-      checkBodySize();
+      _checkBodySize();
     }
     catch (Exception& e)
     {

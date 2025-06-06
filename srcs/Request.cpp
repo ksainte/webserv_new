@@ -51,6 +51,12 @@ void Request::storeHeaders()
     }
     _headers[key] = value;
   }
+
+  // Store host header separately since we call it often
+  const HeaderIt it = _headers.find("host");
+  if (it != _headers.end())
+    _host = it->second;
+
   LOG_DEBUG << SuccessMessages::HEADERS_STORED;
 }
 
