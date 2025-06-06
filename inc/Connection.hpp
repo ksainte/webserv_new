@@ -44,6 +44,9 @@ class Connection : public virtual IEventHandler, public Request
   const LocationBlock* location;
   void sendToGetCGI(std::vector<char*> env);
   bool _continueReadingFile;
+  bool _areHeadersSent;
+  void sendResponseHeaders();
+  std::vector<char*> createMinEnv();
 
   //GET
   std::ifstream MyReadFile;

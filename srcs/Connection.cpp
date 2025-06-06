@@ -88,30 +88,20 @@ void Connection::_checkBodySize() const
 
 bool Connection::isGetRequestaCGI()
 {
-
   const std::string prefix(location->getPrefix());
-
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
-  {
-    std::clog << "root is not valid\n";
     return false;
-  }
-
   struct stat stats = {};
   cgiPath = (*p)[0];
   p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
   if (!p || p[0].empty())
-  {
-    std::clog << "root is not valid\n";
     return false;
-  }
   cgiPath.append("/");
   cgiPath.append((*p)[0]);
   std::cout << "\ncgiPath is " << cgiPath << "\n";
   stat(cgiPath.c_str(), &stats);
-
-  if (!access(cgiPath.c_str(), X_OK))//exists and grants execution permissions!
+  if (!access(cgiPath.c_str(), X_OK))
   {
     if (!S_ISDIR(stats.st_mode))
     {
@@ -121,7 +111,6 @@ bool Connection::isGetRequestaCGI()
   }
   return false;
 }
-
 
 std::string Connection::getContentType()
 {
@@ -159,11 +148,10 @@ void Connection::sendToGetCGI(std::vector<char*> env)
     dup2(_clientFd, 1);
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
-    exit(1);
+    exit(1);//faut le changer?
   }
   else if (pid < 0)
   {
-
     close(_clientFd);
     _manager->unregisterEvent(_clientFd);
     throw Exception(ErrorMessages::E_FORK_FAILED, 404);
@@ -173,6 +161,26 @@ void Connection::sendToGetCGI(std::vector<char*> env)
   close(_clientFd);
 }
 
+std::vector<char*> Connection::createMinEnv()
+{
+  std::vector<std::string> envStorage;
+  std::vector<char*> env;
+  std::ostringstream s;
+  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  int fileLenght = MyReadFile.tellg();
+  MyReadFile.close();
+  s << fileLenght;
+  std::string contentLength(s.str());
+  std::string contentType = getContentType();
+  envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
+  envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
+  envStorage.push_back("QUERY_STRING=" + absPath);
+  for (size_t i = 0; i < envStorage.size(); ++i)
+    env.push_back(const_cast<char*>(envStorage[i].c_str()));
+  env.push_back(NULL);
+  return env;
+}
+
 int Connection::prepareEnvForGetCGI()
 {
   std::vector<std::string> envStorage;
@@ -180,21 +188,7 @@ int Connection::prepareEnvForGetCGI()
   const ConfigType::CgiParams &p = location->getCgiParams();
   int size = p.size();
   if (size == 0)
-  {
-    std::ostringstream s;
-    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
-    int fileLenght = MyReadFile.tellg();
-    MyReadFile.close();
-    s << fileLenght;
-    std::string contentLength(s.str());
-    std::string contentType = getContentType();
-    envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
-    envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
-    envStorage.push_back("QUERY_STRING=" + absPath);
-    for (size_t i = 0; i < envStorage.size(); ++i)
-      env.push_back(const_cast<char*>(envStorage[i].c_str()));
-    env.push_back(NULL);
-  }
+    env = createMinEnv();
   else
   {
     for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
@@ -264,7 +258,6 @@ void Connection::preparePostRequest(const Event* p)
     const_cast<char*>(cl),
     NULL
   };
-
   pid = fork();
   if (pid == 0)
   {
@@ -430,47 +423,47 @@ void Connection::_isPathValid()
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
 }
 
+
+void Connection::sendResponseHeaders()
+{
+  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  int fileLenght = MyReadFile.tellg();
+  MyReadFile.seekg(0, MyReadFile.beg);
+  std::string contentType = getContentType();
+  std::ostringstream headers;
+  headers << "HTTP/1.1 200 OK\r\n"
+    << "Content-Length: " << fileLenght << "\r\n"
+    << "Content-Type: " << contentType << "\r\n"
+    << "Connection: close\r\n"
+    << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+    << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
+  std::string headers_buff = headers.str();
+  send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
+}
+
+
 int Connection::readFILE()
 {
-  static int flag;
-
-  if (MyReadFile.gcount() == 0 && flag == 0)
+  if (_areHeadersSent == false)
   {
-    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
-    int fileLenght = MyReadFile.tellg();
-    MyReadFile.seekg(0, MyReadFile.beg);
-    std::string contentType = getContentType();
-
-    std::ostringstream headers;
-    headers << "HTTP/1.1 200 OK\r\n"
-      << "Content-Length: " << fileLenght << "\r\n"
-      << "Content-Type: " << contentType << "\r\n"
-      << "Connection: close\r\n"
-      << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-      << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
-    std::string headers_buff = headers.str();
-
-    send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
-    flag = 1;
-    return (0);
+    sendResponseHeaders();
+    _areHeadersSent = true;
+    return 0;
   }
-
   MyReadFile.read(_buffer, sizeof(_buffer));
-
   if (MyReadFile.gcount() > 0)
   {
     send(_clientFd, _buffer, MyReadFile.gcount(), 0);
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
-
-  std::clog << "\nEnd of file!!\n";
   MyReadFile.close();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
-  flag = 0;
+  _areHeadersSent = false;
   _continueReadingFile = false;
   memset(_buffer, 0, sizeof(_buffer));
+  std::clog << "\nEnd of file!!\n";
   return 0;
 }
 
