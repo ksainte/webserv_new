@@ -224,112 +224,124 @@ void Connection::_isMethodAllowed() const
     throw Exception(ErrorMessages::E_BAD_METHOD, 405);
 }
 
+
+void Connection::prepareResponse(const Event* p)
+{
+  try
+  {
+    extractHeaders();
+    storeHeaders();
+    _isMethodAllowed();
+    _isPathValid();
+    _checkBodySize();
+  }
+  catch (Exception& e)
+  {
+    LOG_WARNING << e.what();
+    handleError(e.errnum());
+  }
+  _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
+}
+
+
+void Connection::preparePostRequest(const Event* p)
+{
+  std::string line;
+  line = _headers["content-type"];
+  std::string key_1 = "content-type=";
+  key_1.append(line);
+  const char* ct = key_1.c_str();
+  line = _headers["content-length"];
+  std::string key_2 = "content-length=";
+  key_2.append(line);
+  const char* cl = key_2.c_str();
+
+  int pid;
+
+  char* env[] =
+  {
+    const_cast<char*>(ct),
+    const_cast<char*>(cl),
+    NULL
+  };
+
+  pid = fork();
+  if (pid == 0)
+  {
+    dup2(_clientFd, STDIN_FILENO);
+    dup2(_clientFd, STDOUT_FILENO);
+    execve("cgi-bin/cgi.py", (char*[]){"cgi-bin/cgi.py", NULL}, env);
+    perror("execve: ");
+    exit(1);
+  }
+  else if (pid < 0)
+  {
+    close(_clientFd);
+    _manager->unregisterEvent(_clientFd);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+  }
+  wait(NULL);
+  _manager->unregisterEvent(p->getFd());
+  close(p->getFd());
+}
+
+void Connection::prepareDeleteRequest(const Event* p)
+{
+  std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
+  str.append(_path);
+  std::clog << _path;
+  int result = remove(str.c_str());
+  if (result == 0)
+  {
+    const std::string e501 =
+      "HTTP/1.1 200 OK\r\n"
+      "Content-Type: text/html; charset=UTF-8\r\n"
+      "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+      "Content-Length: 1234\r\n\r\n"
+      "<html>"
+      "<body>"
+      "<h1>File file.html deleted.</h1>"
+      "</body>"
+      "</html>";
+    send(_clientFd, e501.c_str(), e501.size(), 0);
+  }
+  std::clog << result;
+  _manager->unregisterEvent(p->getFd());
+  close(p->getFd());
+}
+
+
+bool Connection::isNotEmpty(const Event* p)
+{
+  if (!_ErrResponse.empty())
+  {
+    send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
+    _manager->unregisterEvent(p->getFd());
+    close(p->getFd());
+    return false;
+  }
+  if (!_listDir.empty())
+  {
+    send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
+    _manager->unregisterEvent(p->getFd());
+    close(p->getFd());
+    return false;
+  }
+  return true;
+}
+
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN)
   {
-    try
-    {
-      extractHeaders();
-      storeHeaders();
-      _isMethodAllowed();
-      _isPathValid();
-      _checkBodySize();
-    }
-    catch (Exception& e)
-    {
-      LOG_WARNING << e.what();
-      handleError(e.errnum());
-    }
-
-    _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
-    return 0;
+    prepareResponse(p);
   }
-  if (flags & EPOLLOUT)
+  else if (flags & EPOLLOUT && isNotEmpty(p))
   {
-    if (!_ErrResponse.empty())
-    {
-      send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-      return 0;
-    }
-
-    if (!_listDir.empty())
-    {
-      send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-      return 0;
-    }
-
     if (_method == "POST")
-    {
-      std::string line;
-
-      line = _headers["content-type"];
-      std::string key_1 = "content-type=";
-      key_1.append(line);
-      const char* ct = key_1.c_str();
-      line = _headers["content-length"];
-      std::string key_2 = "content-length=";
-      key_2.append(line);
-      const char* cl = key_2.c_str();
-
-      int pid;
-
-      char* env[] =
-      {
-        const_cast<char*>(ct),
-        const_cast<char*>(cl),
-        NULL
-      };
-
-      pid = fork();
-
-      
-      if (pid == 0)
-      {
-        dup2(_clientFd, STDIN_FILENO);
-        dup2(_clientFd, STDOUT_FILENO);
-        execve("cgi-bin/cgi.py", (char*[]){"cgi-bin/cgi.py", NULL}, env);
-        perror("execve: ");
-        exit(1);
-      }
-      else if (pid < 0)
-      {
-        close(_clientFd);
-        _manager->unregisterEvent(_clientFd);
-        throw Exception(ErrorMessages::E_FORK_FAILED, 404);
-      }
-      wait(NULL);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-    }
-    if (_method == "DELETE")
-    {
-      std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
-      str.append(_path);
-      std::clog << _path;
-      int result = remove(str.c_str());
-      if (result == 0)
-      {
-        const std::string e501 =
-          "HTTP/1.1 200 OK\r\n"
-          "Content-Type: text/html; charset=UTF-8\r\n"
-          "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-          "Content-Length: 1234\r\n\r\n"
-          "<html>"
-          "<body>"
-          "<h1>File file.html deleted.</h1>"
-          "</body>"
-          "</html>";
-        send(_clientFd, e501.c_str(), e501.size(), 0);
-      }
-      std::clog << result;
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-    }
+      preparePostRequest(p);
+    else if (_method == "DELETE")
+      prepareDeleteRequest(p);
     else
     {
       if (!_continueReadingFile && isGetRequestaCGI())

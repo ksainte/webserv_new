@@ -37,6 +37,10 @@ class Connection : public virtual IEventHandler, public Request
   std::string cgiPath;
   std::string getContentType();
   int prepareEnvForGetCGI();
+  void prepareResponse(const Event* p);
+  void preparePostRequest(const Event* p);
+  void prepareDeleteRequest(const Event* p);
+  bool isNotEmpty(const Event* p);
   const LocationBlock* location;
   void sendToGetCGI(std::vector<char*> env);
   bool _continueReadingFile;
