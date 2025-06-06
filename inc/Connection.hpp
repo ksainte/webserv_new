@@ -20,7 +20,7 @@ class Connection : public virtual IEventHandler, public Request
 
   bool isGetRequestaCGI();
   int send_to_cgi(const char * absPath);
-  int readFILE(const char * absPath);
+  int readFILE();
 
   void  _checkBodySize() const;
 
@@ -34,6 +34,7 @@ class Connection : public virtual IEventHandler, public Request
   std::string _ErrResponse;
   std::string absPath;
   std::string cgiPath;
+  std::string getContentType();
   bool prepareEnvForGetCGI();
 
   //GET

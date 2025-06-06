@@ -129,50 +129,27 @@ bool Connection::isGetRequestaCGI()
   return false;
 }
 
-char* get_content_type(char* filename)
+
+std::string Connection::getContentType()
 {
-  char* file_path = strtok(filename, ".");
-  char* file_extension;
-  while (file_path != NULL)
-  {
-    // find the file extension
-    file_extension = file_path;
-    file_path = strtok(NULL, " ");
-  }
-
-  // sets file extension to lowercase in order to compare strings
-  for (int i = 0; file_extension[i]; i++)
-  {
-    file_extension[i] = tolower(file_extension[i]);
-  }
-
-  // comparing the strings to match with its corresponding type
-  if ((strcmp(file_extension, "jpeg") == 0) ||
-    (strcmp(file_extension, "jpg") == 0))
-  {
-    return "image/jpeg";
-  }
-  else if (strcmp(file_extension, "gif") == 0)
-  {
-    return "image/gif";
-  }
-  else if ((strcmp(file_extension, "html") == 0) ||
-    (strcmp(file_extension, "htm") == 0))
-  {
-    return "text/html";
-  }
-  else if (strcmp(file_extension, "mp4") == 0)
-  {
-    return "video/mp4";
-  }
-  else if (strcmp(file_extension, "mvk") == 0)
-  {
-    return "video/mkv";
-  }
+  std::size_t found = absPath.find(".");
+  if (found == std::string::npos)
+    return NULL;
+  std::string str = absPath.substr(found + 1);
+  for (int i = 0; str[i]; i++)
+      str[i] = tolower(str[i]);
+  if (str.compare("jpeg") == 0 || str.compare("jpg") == 0)
+      return "image/jpeg";
+  else if (str.compare("gif") == 0)
+      return "image/gif";
+  else if (str.compare("html") == 0 || str.compare("htm") == 0)
+      return "text/html";
+  else if (str.compare("mp4") == 0)
+      return "video/mp4";
+  else if (str.compare("mvk") == 0)
+      return "video/mkv";
   else
-  {
-    return "text/plain";
-  }
+      return "text/plain";
 }
 
 
@@ -191,31 +168,43 @@ bool Connection::prepareEnvForGetCGI()
   int size = p.size();
   if (!size)
   {
-    // return false;
-    //create artificial env
-    // iterate as above
-    // MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
-    // int fileLenght = MyReadFile.tellg();
-    // MyReadFile.close();
-    // char* contentType = get_content_type((char*)absPath.c_str());
-
+    std::ostringstream s;
+    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+    int fileLenght = MyReadFile.tellg();
+    MyReadFile.close();
+    s << fileLenght;
+    std::string contentLength(s.str());
+    std::string contentType = getContentType();
+    envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
+    envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
+    envStorage.push_back("QUERY_STRING=" + absPath);
+    for (size_t i = 0; i < envStorage.size(); ++i)
+      env.push_back(const_cast<char*>(envStorage[i].c_str()));
+    env.push_back(NULL);
   }
-  for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
-    envStorage.push_back(it->first + "=" + it->second);
-  envStorage.push_back("QUERY_STRING=" + absPath);
-  for (size_t i = 0; i < envStorage.size(); ++i)
-    env.push_back(const_cast<char*>(envStorage[i].c_str()));
-  env.push_back(NULL);
+  else
+  {
+    for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
+      envStorage.push_back(it->first + "=" + it->second);
+    envStorage.push_back("QUERY_STRING=" + absPath);
+    for (size_t i = 0; i < envStorage.size(); ++i)
+      env.push_back(const_cast<char*>(envStorage[i].c_str()));
+    env.push_back(NULL);
+  }
 
   int pid;
 
   pid = fork();
 
+  char *arr[2];
+  arr[0] = const_cast<char*>(cgiPath.c_str());
+  arr[1] = NULL;
+
   if (pid == 0)
   {
     close(1);
     dup2(_clientFd, 1);
-    execve(cgiPath.c_str(), (char*[]){const_cast<char*>(cgiPath.c_str()), NULL}, env.data());//a remplacer avec cgi path
+    execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
     exit(1);
   }
@@ -303,6 +292,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
 
       pid = fork();
 
+      
       if (pid == 0)
       {
         dup2(_clientFd, STDIN_FILENO);
@@ -348,7 +338,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
         std::clog << "\nend of cgi\n";
         return 0;
       }
-      readFILE(absPath.c_str());
+      readFILE();
     }
   }
   return 0;
@@ -423,16 +413,16 @@ void Connection::_isPathValid()
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
 }
 
-int Connection::readFILE(const char * absPath)
+int Connection::readFILE()
 {
   static int flag;
 
   if (MyReadFile.gcount() == 0 && flag == 0)
   {
-    MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
+    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
     int fileLenght = MyReadFile.tellg();
     MyReadFile.seekg(0, MyReadFile.beg);
-    char* contentType = get_content_type((char*)absPath);
+    std::string contentType = getContentType();
 
     std::ostringstream headers;
     headers << "HTTP/1.1 200 OK\r\n"
