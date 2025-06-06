@@ -95,13 +95,13 @@ ssize_t bodySize(const std::string& s)
 {
   std::stringstream iss(s);
 
-  std::map<char, ssize_t> conversions;
-  conversions['B'] = 1;
-  conversions['K'] = 1000;
-  conversions['M'] = 1000000;
+  std::map<std::string, ssize_t> conversions;
+  conversions["B"] = 1;
+  conversions["KB"] = 1000;
+  conversions["MB"] = 1000000;
 
   ssize_t n;
-  char suffix;
+  std::string suffix;
 
   iss >> n;
 
@@ -115,7 +115,7 @@ ssize_t bodySize(const std::string& s)
 
   if (iss.peek() != -1) return -1;
 
-  const std::map<char, ssize_t>::const_iterator it =
+  const std::map<std::string, ssize_t>::const_iterator it =
     conversions.find(suffix);
 
   if (it == conversions.end()) return -1;

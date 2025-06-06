@@ -9,7 +9,7 @@ const ConfigType::DirectiveMap& ADirective::getDirectives() const { return _dire
 ADirective::ADirective(const ADirective& other):
   _directives(other.getDirectives()),
   _cgiParams(other.getCgiParams()),
-  _errorPages(other.getErrorPages())
+  _errorPages(*other.getErrorPages())
 {
   LOG_DEBUG << "ADirective copied\n";
 }
@@ -20,7 +20,7 @@ ADirective& ADirective::operator=(const ADirective& other)
     return *this;
   _directives = other.getDirectives();
   _cgiParams = other.getCgiParams();
-  _errorPages = other.getErrorPages();
+  _errorPages = *other.getErrorPages();
   return *this;
 }
 
@@ -73,9 +73,9 @@ const ConfigType::CgiParams& ADirective::getCgiParams() const
   return _cgiParams;
 }
 
-const ConfigType::ErrorPage& ADirective::getErrorPages() const
+const ConfigType::ErrorPage* ADirective::getErrorPages() const
 {
-  return _errorPages;
+  return &_errorPages;
 }
 
 std::string ADirective::toJson(int indentLevel) const

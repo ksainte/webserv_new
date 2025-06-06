@@ -430,7 +430,6 @@ Tokenizer::Tokenizer(std::string file) : _len()
     fileIn.open(file.c_str());
     if (!fileIn.good())
     {
-        // printError(INPUT);
         LOG_CRITICAL << ErrorMessages::E_OPEN_FILE;
         throw std::invalid_argument("");
     }

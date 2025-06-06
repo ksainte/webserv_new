@@ -36,10 +36,9 @@ int Listener::handleEvent(const Event* event, const unsigned int flags)
   return 0;
 }
 
-int Listener::handleError(const int errnum)
+void Listener::handleError(const int errnum)
 {
   (void)errnum;
-  return false;
 }
 
 Listener::Listener(const std::list<std::pair<int, int> >& addresses, Epoll& eventManager,

@@ -40,15 +40,11 @@ int	Epoll::modifyEvent(const int eventFlags, Event* ptr) const
 	return 0;
 }
 
-int	Epoll::unregisterEvent(int fd) const
+void	Epoll::unregisterEvent(const int fd) const
 {
 	if (epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL) == -1)
-	{
-		LOG_WARNING << ErrorMessages::E_EPOLL_CTL_DEL << ": " << strerror(errno);
-		return -1;
-	}
+			LOG_WARNING << ErrorMessages::E_EPOLL_CTL_DEL << ": " << strerror(errno);
 	LOG_DEBUG << SuccessMessages::S_EPOLL_CTL_DEL;
-	return 0;
 }
 
 Epoll::Epoll() : _epfd(epoll_create1(0)), _events()

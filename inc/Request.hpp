@@ -25,6 +25,7 @@ protected:
   std::string _path;
   std::string _version;
   std::string _host;
+  int _clientFd;
 
   std::vector<unsigned char> _buf;
   Headers _headers;
@@ -39,6 +40,7 @@ public:
   Request(const Request& other);
   Request& operator=(const Request& other);
 
+  int getClientFd() const;;
   const std::string& getMethod() const;
   const std::string& getPath() const;
   const std::string& getVersion() const;
@@ -46,7 +48,7 @@ public:
   const std::vector<unsigned char>& getBuf() const;
   size_t getOffset() const;
 
-  void extractHeaders(int fd);
+  void extractHeaders();
   void storeHeaders();
 
   const Headers&

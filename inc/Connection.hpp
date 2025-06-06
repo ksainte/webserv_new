@@ -30,7 +30,6 @@ class Connection : public virtual IEventHandler, public Request
   Epoll* _manager;
   Searcher* _searcher;
   int _sockFd;
-  int _clientFd;
   Event _event;
   std::string _ErrResponse;
   std::string absPath;
@@ -41,7 +40,7 @@ class Connection : public virtual IEventHandler, public Request
   std::ifstream MyReadFile;
   char _buffer[4096];
 
-  const std::string& getErrorMessage(int errnum);
+  static const std::string& getErrorMessage(int errnum);
 
   static std::map<int, std::string> create_status_map() {
     std::map<int, std::string> m;
@@ -64,11 +63,10 @@ public:
   Connection& operator=(const Connection& other);
   ~Connection();
 
-  int handleError(int errnum);
+  void handleError(int errnum);
   int handleEvent(const Event* p, unsigned int flags);
 
   int getSockFd() const;
-  int getClientFd() const;
   Searcher* getSearcher() const;
   Epoll* getManager() const;
   Event* getEvent();

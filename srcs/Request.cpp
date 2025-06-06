@@ -60,11 +60,13 @@ void Request::storeHeaders()
   LOG_DEBUG << SuccessMessages::HEADERS_STORED;
 }
 
-void Request::extractHeaders(const int fd)
+void Request::extractHeaders()
 {
   ssize_t bytesRead = 0;
 
-  bytesRead = recv(fd, _buf.data(), _buf.capacity(), MSG_PEEK);
+  bytesRead = recv(_clientFd, _buf.data(), _buf.capacity(), MSG_PEEK);
+
+  if (!bytesRead) return;
 
   if (bytesRead == -1)
     throw Exception(ErrorMessages::E_RECV, Exception::BAD_REQUEST);
@@ -81,13 +83,15 @@ void Request::extractHeaders(const int fd)
   }
 
   _offset = it - _buf.begin() + _headersEnd.size();
-  bytesRead = recv(fd, _buf.data(), _offset, 0);
+  bytesRead = recv(_clientFd, _buf.data(), _offset, 0);
+
+  if (!bytesRead) return;
 
   if (bytesRead == -1)
     throw Exception(ErrorMessages::E_RECV, Exception::BAD_REQUEST);
 }
 
-Request::Request(): _offset(0)
+Request::Request(): _offset(0), _clientFd(-1)
 {
   _buf.resize(_buffSize);
   LOG_DEBUG << "Request created";
@@ -99,6 +103,7 @@ Request::Request(const Request& other):
   _path(other.getPath()),
   _version(other.getVersion()),
   _host(other.getHost()),
+  _clientFd(other.getClientFd()),
   _buf(other.getBuf()),
   _headers(other.getHeaders())
 {
@@ -117,6 +122,7 @@ Request& Request::operator=(const Request& other)
   _host = other.getHost();
   _buf = other.getBuf();
   _headers = other.getHeaders();
+  _clientFd = other.getClientFd();
 
   LOG_DEBUG << "Request copy assigned";
   return *this;
@@ -140,6 +146,8 @@ const std::map<std::string, std::string>&
 Request::getHeaders() const { return _headers; }
 
 size_t Request::getOffset() const { return _offset; }
+
+int Request::getClientFd() const { return _clientFd; }
 
 const std::string& Request::getMethod() const { return _method; }
 

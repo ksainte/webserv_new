@@ -99,11 +99,19 @@ private:
       return ;
     }
 
+    if (_target == LOCATION && _value == "error_page")
+    {
+      _serverBlocks[_serverBlocks.size() - 1]
+        .search(_prefix)
+          ->addErrorPage(_it, _end);
+    }
+
     // Add directive to a location sub-block in the last server block
     if (_value != "cgi_params" && _value != "error_page")
     {
       _serverBlocks[_serverBlocks.size() - 1]
-        .search(_prefix)->addDirective(_it, _end);
+        .search(_prefix)
+          ->addDirective(_it, _end);
       return;
     }
 
@@ -118,7 +126,6 @@ private:
       _serverBlocks[_serverBlocks.size() - 1]
         .search(_prefix)
         ->addCgiParams((*tmp).value, (*tmp2).value);
-      return;
     }
 
   }
