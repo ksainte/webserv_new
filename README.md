@@ -4,6 +4,8 @@ TODO
 
 cgi env    check that env var name contains only alphanumeric character
 
+listdir    update href link to match the root directive 
+
 # webserv_new
 
 # CGI

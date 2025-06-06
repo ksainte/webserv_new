@@ -6,6 +6,7 @@
 #include <map>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 /**
  * @brief Convert a ipV4 address in dot notation into binary in network-bytes order
@@ -125,6 +126,37 @@ ssize_t bodySize(const std::string& s)
   if (overflow / it->second != n) return -1;
 
   return n * it->second;
+}
+
+std::string listDir(const std::string& name) {
+
+  std::stringstream ss;
+  std::stringstream res;
+  DIR* dirp = opendir(name.c_str());
+
+  ss << "<!DOCTYPE html>\n";
+  ss << "<html>\n<head>\n<title>Directory Listing</title>\n</head>\n<body>\n";
+  ss << "<h1>Contents of " << name << "</h1>\n";
+  ss << "<ul>\n";
+
+  dirent* dirent;
+
+  while ((dirent = readdir(dirp)))
+  {
+    ss << "<li><a href=\"" << dirent->d_name << "\">" << dirent->d_name << "</a></li>\n";
+  }
+
+  ss << "</ul>\n";
+  ss << "</body>\n</html>\n";
+
+  closedir(dirp);
+
+  res << "HTTP/1.1 200 OK\r\n"
+  << "content-length: " << ss.str().size() << "\r\n"
+  << "content-type: text/html\r\n\r\n"
+  << ss.str();
+
+  return res.str();
 }
 
 bool isDir(const char* path)

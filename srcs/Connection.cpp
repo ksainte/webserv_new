@@ -268,6 +268,14 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
       return 0;
     }
 
+    if (!_listDir.empty())
+    {
+      send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
+      _manager->unregisterEvent(p->getFd());
+      close(p->getFd());
+      return 0;
+    }
+
     if (_method == "POST")
     {
       std::string line;
@@ -405,6 +413,15 @@ void Connection::_isPathValid()
       && !access(absPath.c_str(), F_OK)
       && !isDir(absPath.c_str()))
       return;
+
+  const ConfigType::DirectiveValue* autoindex =
+    _searcher->findLocationDirective(_sockFd, "autoindex", _host, _path);
+
+  if (isDir(absPath.c_str()) && autoindex && (*autoindex)[0] == "true")
+  {
+    _listDir = listDir(absPath);
+    return ;
+  }
 
   // We check default file access
   // until one is valid, or we reach vector end
