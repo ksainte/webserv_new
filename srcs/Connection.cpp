@@ -30,7 +30,6 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _buffer(),
   _sockFd(-1)
 {
-  // Clear the buffer
   memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
@@ -89,12 +88,6 @@ void Connection::_checkBodySize() const
 
 bool Connection::isGetRequestaCGI()
 {
-  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
-  if (!location)
-  {
-    std::clog << "\nroute is not valid\n";
-    return false;
-  }
 
   const std::string prefix(location->getPrefix());
 
@@ -152,21 +145,41 @@ std::string Connection::getContentType()
       return "text/plain";
 }
 
-
-bool Connection::prepareEnvForGetCGI()
+void Connection::sendToGetCGI(std::vector<char*> env)
 {
-  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
-  if (!location)
-  {
-    std::clog << "\nroute is not valid\n";
-    return false;
-  }
+  int pid;
+  char *arr[2];
 
+  pid = fork();
+  arr[0] = const_cast<char*>(cgiPath.c_str());
+  arr[1] = NULL;
+  if (pid == 0)
+  {
+    close(1);
+    dup2(_clientFd, 1);
+    execve(cgiPath.c_str(), arr, env.data());
+    perror("execve: ");
+    exit(1);
+  }
+  else if (pid < 0)
+  {
+
+    close(_clientFd);
+    _manager->unregisterEvent(_clientFd);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+  }
+  wait(NULL);
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+}
+
+int Connection::prepareEnvForGetCGI()
+{
   std::vector<std::string> envStorage;
   std::vector<char*> env;
   const ConfigType::CgiParams &p = location->getCgiParams();
   int size = p.size();
-  if (!size)
+  if (size == 0)
   {
     std::ostringstream s;
     MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
@@ -191,34 +204,8 @@ bool Connection::prepareEnvForGetCGI()
       env.push_back(const_cast<char*>(envStorage[i].c_str()));
     env.push_back(NULL);
   }
-
-  int pid;
-
-  pid = fork();
-
-  char *arr[2];
-  arr[0] = const_cast<char*>(cgiPath.c_str());
-  arr[1] = NULL;
-
-  if (pid == 0)
-  {
-    close(1);
-    dup2(_clientFd, 1);
-    execve(cgiPath.c_str(), arr, env.data());
-    perror("execve: ");
-    exit(1);
-  }
-  else if (pid < 0)
-  {
-
-    close(_clientFd);
-    _manager->unregisterEvent(_clientFd);
-    return false;
-  }
-  wait(NULL);
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
-  return true;
+  sendToGetCGI(env);
+  return(0);
 }
 
 void Connection::_isMethodAllowed() const
@@ -309,6 +296,12 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
         perror("execve: ");
         exit(1);
       }
+      else if (pid < 0)
+      {
+        close(_clientFd);
+        _manager->unregisterEvent(_clientFd);
+        throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+      }
       wait(NULL);
       _manager->unregisterEvent(p->getFd());
       close(p->getFd());
@@ -339,11 +332,9 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     }
     else
     {
-      if (isGetRequestaCGI())
-      {
-        prepareEnvForGetCGI();
-        return 0;
-      }
+      if (!_continueReadingFile && isGetRequestaCGI())
+        return (prepareEnvForGetCGI());
+      _continueReadingFile = true;
       readFILE();
     }
   }
@@ -376,8 +367,7 @@ bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 
 void Connection::_isPathValid()
 {
-  const LocationBlock* location =
-    _searcher->getLocation(_sockFd, _host, _path);
+  location = _searcher->getLocation(_sockFd, _host, _path);
 
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
@@ -467,6 +457,7 @@ int Connection::readFILE()
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   flag = 0;
+  _continueReadingFile = false;
   memset(_buffer, 0, sizeof(_buffer));
   return 0;
 }
@@ -534,11 +525,8 @@ void Connection::handleError(const int errnum)
 
   const ConfigType::ErrorPage* errorPages;
 
-  const LocationBlock* loc =
-    _searcher->getLocation(_sockFd, _host, _path);
-
-  if (loc && !loc->getErrorPages()->empty())
-    errorPages = loc->getErrorPages();
+  if (location && !location->getErrorPages()->empty())
+    errorPages = location->getErrorPages();
   else
     errorPages = _searcher->getDefaultServer(_sockFd, _host).getErrorPages();
 

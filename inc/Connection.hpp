@@ -36,7 +36,10 @@ class Connection : public virtual IEventHandler, public Request
   std::string absPath;
   std::string cgiPath;
   std::string getContentType();
-  bool prepareEnvForGetCGI();
+  int prepareEnvForGetCGI();
+  const LocationBlock* location;
+  void sendToGetCGI(std::vector<char*> env);
+  bool _continueReadingFile;
 
   //GET
   std::ifstream MyReadFile;
