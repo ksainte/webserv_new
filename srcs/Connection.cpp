@@ -19,7 +19,7 @@ Connection::Connection():
   _sockFd(-1),
 _buffer()
 {
-  // Clear the buffer
+  // Clear the buffer//
   memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
@@ -27,8 +27,8 @@ _buffer()
 Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
-  _buffer(),
-  _sockFd(-1)
+  _sockFd(-1),
+  _buffer()
 {
   memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
@@ -259,11 +259,14 @@ void Connection::preparePostRequest(const Event* p)
     NULL
   };
   pid = fork();
+  char *arr[2];
+  arr[0] = const_cast<char*>("cgi-bin/cgi.py");
+  arr[1] = NULL;
   if (pid == 0)
   {
     dup2(_clientFd, STDIN_FILENO);
     dup2(_clientFd, STDOUT_FILENO);
-    execve("cgi-bin/cgi.py", (char*[]){"cgi-bin/cgi.py", NULL}, env);
+    execve("cgi-bin/cgi.py", arr, env);//a changer le hardcodement!
     perror("execve: ");
     exit(1);
   }
@@ -487,6 +490,7 @@ const std::string& Connection::getErrorMessage(const int errnum)
 
   return unknown_error_str;
 }
+
 
 void Connection::_defaultErrorPage(const int errnum)
 {
