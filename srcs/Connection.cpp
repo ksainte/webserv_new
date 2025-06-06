@@ -135,7 +135,6 @@ bool Connection::isGetRequestaCGI()
 
 bool Connection::prepareEnvForGetCGI()
 {
-  //typedef std::list<std::pair<std::string, std::string> > CgiParams;
   const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
   if (!location)
   {
@@ -151,27 +150,16 @@ bool Connection::prepareEnvForGetCGI()
     //create artificial env
     // iterate as above
   }
-  char *env[size + 2];
-  int i = 0;
+  std::vector<std::string> envStorage;
+  std::vector<char*> env;
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it) 
   {
-      // std::cout << "first is \n" << it->first << "\n";
-      // std::cout << "second is \n" << it->second << "\n";
-      std::string keyValuePair = it->first;
-      keyValuePair.append("=");
-      keyValuePair.append(it->second);
-      const char* ct = keyValuePair.c_str();
-      env[i] = strdup(const_cast<char*>(ct));
-      std::cout << "\n" << env[i] << "\n";
-      i++;
+        envStorage.push_back(it->first + "=" + it->second);
+        env.push_back(const_cast<char*>(envStorage.back().c_str()));
   }
   std::string queryStr = "QUERY_STRING=" + absPath;
-  env[i] = strdup(queryStr.c_str());
-  i++;
-  env[i] = NULL;
-
-  std::cout << "path is " << absPath << "\n";
-  setenv("QUERY_STRING", absPath.c_str(), 1);
+  env.push_back(const_cast<char*>(queryStr.c_str()));
+  env.push_back(NULL);
 
   int pid;
 
@@ -181,18 +169,17 @@ bool Connection::prepareEnvForGetCGI()
   {
     close(1);
     dup2(_clientFd, 1);
-    execve("./contents/GET.cgi", (char*[]){"./contents/GET.cgi", NULL}, env);//a remplacer avec cgi path
-    // execve(cgiPath.c_str(), (char*[]){const_cast<char*>(cgiPath.c_str()), NULL}, env);//a remplacer avec cgi path
+    execve(cgiPath.c_str(), (char*[]){const_cast<char*>(cgiPath.c_str()), NULL}, env.data());//a remplacer avec cgi path
     perror("execve: ");
     exit(1);
   }
-  // else
-  // {
+  else if (pid < 0)
+  {
 
-  //   close(_clientFd);
-  //   _manager->unregisterEvent(_clientFd);
-  //   return false;
-  // }
+    close(_clientFd);
+    _manager->unregisterEvent(_clientFd);
+    return false;
+  }
   wait(NULL);
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);

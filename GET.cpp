@@ -43,10 +43,10 @@ int main(int argc, char **argv, char **envp)
   char *data, path[2048], time_buffer[256];
   data = std::getenv("QUERY_STRING");
 
-  // for (int i=0; environ[i]!=NULL; i++) proof that is passed!
-  // {
-  //   printf("%d: %s\n", i, envp[i]);
-  // }
+  for (int i=0; environ[i]!=NULL; i++)
+  {
+    printf("%d: %s\n", i, envp[i]);
+  }
 
 
   strcpy(path, data);
@@ -75,14 +75,14 @@ int main(int argc, char **argv, char **envp)
   fseek(filePointer, 0, SEEK_END);
   file_length = ftell(filePointer); // get the exact size of the file
 
-  printf("HTTP/1.0 200 OK\n");
-  printf("Content-Type: %s\n", content_type);
-  printf("Content-Length: %li\n", file_length);
-  printf("Cache-Control: no-cache\n");
-  printf("Connection: Keep-Alive\n");
-  printf("Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\n");
-  printf("Expires: Sun, 17 Jan 2038 19:14:07 GMT\n");
-  printf("Date: %s\n\n", time_buffer);
+  printf("HTTP/1.0 200 OK\r\n");
+  printf("Content-Type: %s\r\n", content_type);
+  printf("Content-Length: %li\r\n", file_length);
+  printf("Cache-Control: no-cache\r\n");
+  printf("Connection: keep-alive\r\n");
+  printf("Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n");
+  printf("Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n");
+  printf("Date: %s\r\n\r\n", time_buffer);
 
   fseek(filePointer, 0, SEEK_SET);
 
