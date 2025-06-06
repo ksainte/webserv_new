@@ -43,11 +43,10 @@ int main(int argc, char **argv, char **envp)
   char *data, path[2048], time_buffer[256];
   data = std::getenv("QUERY_STRING");
 
-  for (int i=0; environ[i]!=NULL; i++)
-  {
-    printf("%d: %s\n", i, envp[i]);
-  }
-
+  // for (int i=0; environ[i]!=NULL; i++)
+  // {
+  //   printf("%d: %s\n", i, envp[i]);
+  // }
 
   strcpy(path, data);
 

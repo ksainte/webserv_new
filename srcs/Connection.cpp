@@ -132,6 +132,52 @@ bool Connection::isGetRequestaCGI()
   return false;
 }
 
+char* get_content_type(char* filename)
+{
+  char* file_path = strtok(filename, ".");
+  char* file_extension;
+  while (file_path != NULL)
+  {
+    // find the file extension
+    file_extension = file_path;
+    file_path = strtok(NULL, " ");
+  }
+
+  // sets file extension to lowercase in order to compare strings
+  for (int i = 0; file_extension[i]; i++)
+  {
+    file_extension[i] = tolower(file_extension[i]);
+  }
+
+  // comparing the strings to match with its corresponding type
+  if ((strcmp(file_extension, "jpeg") == 0) ||
+    (strcmp(file_extension, "jpg") == 0))
+  {
+    return "image/jpeg";
+  }
+  else if (strcmp(file_extension, "gif") == 0)
+  {
+    return "image/gif";
+  }
+  else if ((strcmp(file_extension, "html") == 0) ||
+    (strcmp(file_extension, "htm") == 0))
+  {
+    return "text/html";
+  }
+  else if (strcmp(file_extension, "mp4") == 0)
+  {
+    return "video/mp4";
+  }
+  else if (strcmp(file_extension, "mvk") == 0)
+  {
+    return "video/mkv";
+  }
+  else
+  {
+    return "text/plain";
+  }
+}
+
 
 bool Connection::prepareEnvForGetCGI()
 {
@@ -142,23 +188,26 @@ bool Connection::prepareEnvForGetCGI()
     return false;
   }
 
+  std::vector<std::string> envStorage;
+  std::vector<char*> env;
   const ConfigType::CgiParams &p = location->getCgiParams();
   int size = p.size();
   if (!size)
   {
-    return false;
+    // return false;
     //create artificial env
     // iterate as above
+    // MyReadFile.open( absPath, std::ios::binary | std::ios::ate);
+    // int fileLenght = MyReadFile.tellg();
+    // MyReadFile.close();
+    // char* contentType = get_content_type((char*)absPath.c_str());
+
   }
-  std::vector<std::string> envStorage;
-  std::vector<char*> env;
-  for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it) 
-  {
-        envStorage.push_back(it->first + "=" + it->second);
-        env.push_back(const_cast<char*>(envStorage.back().c_str()));
-  }
-  std::string queryStr = "QUERY_STRING=" + absPath;
-  env.push_back(const_cast<char*>(queryStr.c_str()));
+  for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
+    envStorage.push_back(it->first + "=" + it->second);
+  envStorage.push_back("QUERY_STRING=" + absPath);
+  for (size_t i = 0; i < envStorage.size(); ++i)
+    env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
 
   int pid;
@@ -375,52 +424,6 @@ void Connection::_isPathValid()
   if (_checkDefaultFileAccess(prefix)) return;
 
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
-}
-
-char* get_content_type(char* filename)
-{
-  char* file_path = strtok(filename, ".");
-  char* file_extension;
-  while (file_path != NULL)
-  {
-    // find the file extension
-    file_extension = file_path;
-    file_path = strtok(NULL, " ");
-  }
-
-  // sets file extension to lowercase in order to compare strings
-  for (int i = 0; file_extension[i]; i++)
-  {
-    file_extension[i] = tolower(file_extension[i]);
-  }
-
-  // comparing the strings to match with its corresponding type
-  if ((strcmp(file_extension, "jpeg") == 0) ||
-    (strcmp(file_extension, "jpg") == 0))
-  {
-    return "image/jpeg";
-  }
-  else if (strcmp(file_extension, "gif") == 0)
-  {
-    return "image/gif";
-  }
-  else if ((strcmp(file_extension, "html") == 0) ||
-    (strcmp(file_extension, "htm") == 0))
-  {
-    return "text/html";
-  }
-  else if (strcmp(file_extension, "mp4") == 0)
-  {
-    return "video/mp4";
-  }
-  else if (strcmp(file_extension, "mvk") == 0)
-  {
-    return "video/mkv";
-  }
-  else
-  {
-    return "text/plain";
-  }
 }
 
 int Connection::readFILE(const char * absPath)
