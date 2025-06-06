@@ -430,9 +430,9 @@ Tokenizer::Tokenizer(std::string file) : _len()
     fileIn.open(file.c_str());
     if (!fileIn.good())
     {
-        printError(INPUT);
+        // printError(INPUT);
         LOG_CRITICAL << ErrorMessages::E_OPEN_FILE;
-        throw;
+        throw std::invalid_argument("");
     }
     while (getline(fileIn, buff))
         ft_tokenize(buff + '\n');
