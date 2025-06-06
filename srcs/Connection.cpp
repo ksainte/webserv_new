@@ -61,7 +61,6 @@ Connection& Connection::operator=(const Connection& other)
 
 Connection::~Connection()
 {
-  // Safely close the file stream if open
   try {
     if (MyReadFile.is_open()) {
       MyReadFile.close();
@@ -69,7 +68,7 @@ Connection::~Connection()
   } catch (...) {
     // Ignore exceptions during destruction
   }
-  
+
   LOG_DEBUG << "Connection destroyed\n";
 }
 
@@ -213,7 +212,7 @@ void Connection::_isMethodAllowed() const
   for (;it != methods->end() && _method != *it; ++it) {}
 
   if (it == methods->end())
-    throw Exception(ErrorMessages::E_BAD_METHOD, 400);
+    throw Exception(ErrorMessages::E_BAD_METHOD, 405);
 }
 
 int Connection::handleEvent(const Event* p, const unsigned int flags)
@@ -536,10 +535,10 @@ void Connection::_defaultErrorPage(const int errnum)
 
   std::ostringstream res;
   res << "HTTP/1.1 " << errval << "\r\n"
-    << "Content-Length: " << body << "\r\n"
-    << "Content-Type: text/html\r\n"
-    << "Connection: close\r\n\r\n"
-    << body;
+      << "Content-Length: " << body.size() << "\r\n"
+      << "Content-Type: text/html\r\n"
+      << "Connection: close\r\n\r\n"
+      << body;
 
   _ErrResponse = res.str();
 }

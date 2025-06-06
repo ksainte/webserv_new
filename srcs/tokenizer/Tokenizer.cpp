@@ -2,6 +2,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "../../inc/Logger.hpp"
+#include "../../inc/constants/ErrorMessages.hpp"
 #include "../../inc/types/TokenType.hpp"
 
 int Tokenizer::printError(int err)
@@ -420,7 +422,7 @@ const std::list<Token> &Tokenizer::ft_get_token_list() const
 }
 
 
-Tokenizer::Tokenizer(std::string file)
+Tokenizer::Tokenizer(std::string file) : _len()
 {
     std::ifstream fileIn;
     std::string buff;
@@ -429,7 +431,8 @@ Tokenizer::Tokenizer(std::string file)
     if (!fileIn.good())
     {
         printError(INPUT);
-        throw std::runtime_error("");
+        LOG_CRITICAL << ErrorMessages::E_OPEN_FILE;
+        throw;
     }
     while (getline(fileIn, buff))
         ft_tokenize(buff + '\n');

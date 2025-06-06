@@ -24,6 +24,12 @@ const char* ErrorMessages::E_BAD_ROUTE =
 const char* ErrorMessages::E_BAD_PATH =
   "invalid path";
 
+const char* ErrorMessages::E_ARGV =
+  "webserv: usage: ./webserv <file>";
+
+const char* ErrorMessages::E_OPEN_FILE =
+  "error opening configuration file";
+
 const char* ErrorMessages::E_HTTP_VERSION =
   "HTTP version not supported";
 

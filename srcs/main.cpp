@@ -18,8 +18,14 @@ void signalHandler(const int sigNum)
   }
 }
 
-int main()
+int main(const int argc, char **argv)
 {
+  if (argc != 2)
+  {
+    LOG_WARNING << ErrorMessages::E_ARGV;
+    return 0;
+  }
+
   // Init signal handler
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);
@@ -27,13 +33,13 @@ int main()
   
   try
   {
-    const Tokenizer tokenizer("configFile/single-server.config");
+    const Tokenizer tokenizer(argv[argc - 1]);
     const Config config(tokenizer.ft_get_token_list());
     Searcher searcher(config);
     Epoll eventManager;
-	ConnectionManager connManager(searcher, eventManager);
-	Listener listener(searcher.getAddresses(), eventManager, connManager);
-	eventManager.wait();
+	  ConnectionManager connManager(searcher, eventManager);
+	  Listener listener(searcher.getAddresses(), eventManager, connManager);
+	  eventManager.wait();
   }
   catch (const std::exception& e)
   {

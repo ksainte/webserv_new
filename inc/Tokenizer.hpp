@@ -55,7 +55,7 @@ class Tokenizer
 		int 			  printError(int err);
 
 	public:
-		Tokenizer(std::string file);
+		explicit Tokenizer(std::string file);
 		~Tokenizer();
 
 		int ft_tokenize(std::string s1);
