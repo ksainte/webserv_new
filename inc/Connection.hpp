@@ -32,6 +32,7 @@ class Connection : public virtual IEventHandler, public Request
   int _sockFd;
   Event _event;
   std::string _ErrResponse;
+  std::string _listDir;
   std::string absPath;
   std::string cgiPath;
   bool prepareEnvForGetCGI();
