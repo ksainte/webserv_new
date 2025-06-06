@@ -2,11 +2,7 @@
 
 TODO
 
-request.cpp     add _queryString for query parameter
-
-bodySize        we should handle all suffixe as string not char 
-
-access    if root is not set, we must also check relative path
+cgi env    check that env var name contains only alphanumeric character
 
 # webserv_new
 

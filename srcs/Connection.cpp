@@ -488,7 +488,7 @@ void Connection::_defaultErrorPage(const int errnum)
 {
   std::string errval = getErrorMessage(errnum);
 
-  std::string body =
+  const std::string body =
     "<!DOCTYPE html>\n"
     "<html>\n"
     "<head>\n"

@@ -40,7 +40,7 @@ class Connection : public virtual IEventHandler, public Request
   std::ifstream MyReadFile;
   char _buffer[4096];
 
-  const std::string& getErrorMessage(int errnum);
+  static const std::string& getErrorMessage(int errnum);
 
   static std::map<int, std::string> create_status_map() {
     std::map<int, std::string> m;
