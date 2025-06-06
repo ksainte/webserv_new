@@ -341,9 +341,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     {
       if (isGetRequestaCGI())
       {
-        std::clog << "\nis cgi\n";
         prepareEnvForGetCGI();
-        std::clog << "\nend of cgi\n";
         return 0;
       }
       readFILE();
