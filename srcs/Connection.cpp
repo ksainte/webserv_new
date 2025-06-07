@@ -17,7 +17,10 @@ Connection::Connection():
   _manager(NULL),
   _searcher(NULL),
   _sockFd(-1),
-_buffer()
+  location(),
+  _continueReadingFile(),
+  _areHeadersSent(),
+  _buffer()
 {
   // Clear the buffer//
   memset(_buffer, 0, sizeof(_buffer));
@@ -28,6 +31,9 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
   _sockFd(-1),
+  location(),
+  _continueReadingFile(),
+  _areHeadersSent(),
   _buffer()
 {
   memset(_buffer, 0, sizeof(_buffer));
@@ -39,6 +45,9 @@ Connection::Connection(const Connection& other):
   _manager(other.getManager()),
   _searcher(other.getSearcher()),
   _sockFd(other.getSockFd()),
+  location(),
+  _continueReadingFile(),
+  _areHeadersSent(),
   _buffer()
 {
   LOG_DEBUG << "Connection copied\n";
@@ -57,11 +66,15 @@ Connection& Connection::operator=(const Connection& other)
 
 Connection::~Connection()
 {
-  try {
-    if (MyReadFile.is_open()) {
+  try
+  {
+    if (MyReadFile.is_open())
+    {
       MyReadFile.close();
     }
-  } catch (...) {
+  }
+  catch (...)
+  {
     // Ignore exceptions during destruction
   }
 
@@ -119,25 +132,25 @@ std::string Connection::getContentType()
     return NULL;
   std::string str = absPath.substr(found + 1);
   for (int i = 0; str[i]; i++)
-      str[i] = tolower(str[i]);
+    str[i] = tolower(str[i]);
   if (str.compare("jpeg") == 0 || str.compare("jpg") == 0)
-      return "image/jpeg";
+    return "image/jpeg";
   else if (str.compare("gif") == 0)
-      return "image/gif";
+    return "image/gif";
   else if (str.compare("html") == 0 || str.compare("htm") == 0)
-      return "text/html";
+    return "text/html";
   else if (str.compare("mp4") == 0)
-      return "video/mp4";
+    return "video/mp4";
   else if (str.compare("mvk") == 0)
-      return "video/mkv";
+    return "video/mkv";
   else
-      return "text/plain";
+    return "text/plain";
 }
 
 void Connection::sendToGetCGI(std::vector<char*> env)
 {
   int pid;
-  char *arr[2];
+  char* arr[2];
 
   pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
@@ -148,7 +161,7 @@ void Connection::sendToGetCGI(std::vector<char*> env)
     dup2(_clientFd, 1);
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
-    exit(1);//faut le changer?
+    exit(1); //faut le changer?
   }
   else if (pid < 0)
   {
@@ -166,7 +179,7 @@ std::vector<char*> Connection::createMinEnv()
   std::vector<std::string> envStorage;
   std::vector<char*> env;
   std::ostringstream s;
-  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  MyReadFile.open(absPath.c_str(), std::ios::binary | std::ios::ate);
   int fileLenght = MyReadFile.tellg();
   MyReadFile.close();
   s << fileLenght;
@@ -185,7 +198,7 @@ int Connection::prepareEnvForGetCGI()
 {
   std::vector<std::string> envStorage;
   std::vector<char*> env;
-  const ConfigType::CgiParams &p = location->getCgiParams();
+  const ConfigType::CgiParams& p = location->getCgiParams();
   int size = p.size();
   if (size == 0)
     env = createMinEnv();
@@ -199,7 +212,7 @@ int Connection::prepareEnvForGetCGI()
     env.push_back(NULL);
   }
   sendToGetCGI(env);
-  return(0);
+  return (0);
 }
 
 void Connection::_isMethodAllowed() const
@@ -212,12 +225,13 @@ void Connection::_isMethodAllowed() const
 
   ConfigType::DirectiveValueIt it = methods->begin();
 
-  for (;it != methods->end() && _method != *it; ++it) {}
+  for (; it != methods->end() && _method != *it; ++it)
+  {
+  }
 
   if (it == methods->end())
     throw Exception(ErrorMessages::E_BAD_METHOD, 405);
 }
-
 
 void Connection::prepareResponse(const Event* p)
 {
@@ -236,7 +250,6 @@ void Connection::prepareResponse(const Event* p)
   }
   _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
 }
-
 
 void Connection::preparePostRequest(const Event* p)
 {
@@ -259,14 +272,14 @@ void Connection::preparePostRequest(const Event* p)
     NULL
   };
   pid = fork();
-  char *arr[2];
+  char* arr[2];
   arr[0] = const_cast<char*>("cgi-bin/cgi.py");
   arr[1] = NULL;
   if (pid == 0)
   {
     dup2(_clientFd, STDIN_FILENO);
     dup2(_clientFd, STDOUT_FILENO);
-    execve("cgi-bin/cgi.py", arr, env);//a changer le hardcodement!
+    execve("cgi-bin/cgi.py", arr, env); //a changer le hardcodement!
     perror("execve: ");
     exit(1);
   }
@@ -305,7 +318,6 @@ void Connection::prepareDeleteRequest(const Event* p)
   _manager->unregisterEvent(p->getFd());
   close(p->getFd());
 }
-
 
 bool Connection::isNotEmpty(const Event* p)
 {
@@ -406,9 +418,9 @@ void Connection::_isPathValid()
   // If absPath + uri is a valid file
   // we send it
   if (prefix != _path
-      && !access(absPath.c_str(), F_OK)
-      && !isDir(absPath.c_str()))
-      return;
+    && !access(absPath.c_str(), F_OK)
+    && !isDir(absPath.c_str()))
+    return;
 
   const ConfigType::DirectiveValue* autoindex =
     _searcher->findLocationDirective(_sockFd, "autoindex", _host, _path);
@@ -416,7 +428,7 @@ void Connection::_isPathValid()
   if (isDir(absPath.c_str()) && autoindex && (*autoindex)[0] == "true")
   {
     _listDir = listDir(absPath);
-    return ;
+    return;
   }
 
   // We check default file access
@@ -426,10 +438,9 @@ void Connection::_isPathValid()
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
 }
 
-
 void Connection::sendResponseHeaders()
 {
-  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  MyReadFile.open(absPath.c_str(), std::ios::binary | std::ios::ate);
   int fileLenght = MyReadFile.tellg();
   MyReadFile.seekg(0, MyReadFile.beg);
   std::string contentType = getContentType();
@@ -443,7 +454,6 @@ void Connection::sendResponseHeaders()
   std::string headers_buff = headers.str();
   send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
 }
-
 
 int Connection::readFILE()
 {
@@ -491,7 +501,6 @@ const std::string& Connection::getErrorMessage(const int errnum)
   return unknown_error_str;
 }
 
-
 void Connection::_defaultErrorPage(const int errnum)
 {
   std::string errval = getErrorMessage(errnum);
@@ -521,17 +530,16 @@ void Connection::_defaultErrorPage(const int errnum)
 
   std::ostringstream res;
   res << "HTTP/1.1 " << errval << "\r\n"
-      << "Content-Length: " << body.size() << "\r\n"
-      << "Content-Type: text/html\r\n"
-      << "Connection: close\r\n\r\n"
-      << body;
+    << "Content-Length: " << body.size() << "\r\n"
+    << "Content-Type: text/html\r\n"
+    << "Connection: close\r\n\r\n"
+    << body;
 
   _ErrResponse = res.str();
 }
 
 void Connection::handleError(const int errnum)
 {
-
   const ConfigType::ErrorPage* errorPages;
 
   if (location && !location->getErrorPages()->empty())

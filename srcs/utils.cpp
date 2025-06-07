@@ -99,7 +99,7 @@ ssize_t bodySize(const std::string& s)
   std::map<std::string, ssize_t> conversions;
   conversions["B"] = 1;
   conversions["KB"] = 1000;
-  conversions["MB"] = 1000000;
+  conversions["MB"] = 1000 * 1000;
 
   ssize_t n;
   std::string suffix;

@@ -33,6 +33,7 @@ class Connection : public virtual IEventHandler, public Request
   Event _event;
   std::string _ErrResponse;
   std::string _listDir;
+  std::string _previousLoc;
   std::string absPath;
   std::string cgiPath;
   std::string getContentType();

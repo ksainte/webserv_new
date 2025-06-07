@@ -2,6 +2,13 @@
 
 TODO
 
+prepare envcgi  change status code to the correct one and handle exception
+
+listdir   afficher seulement les fichier et repertoire
+listdir   update href to contruct the abspath correctly when entering subdir
+
+access & isDir  verify that user has permission, otherwise return 403
+
 verify status code 
 
 add cgi timeout check
