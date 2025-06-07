@@ -88,6 +88,7 @@ void Connection::_checkBodySize() const
 
 bool Connection::isGetRequestaCGI()
 {
+  if (_path.find('?') == std::string::npos) return false;
   const std::string prefix(location->getPrefix());
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
@@ -226,7 +227,8 @@ void Connection::prepareResponse(const Event* p)
     extractHeaders();
     storeHeaders();
     _isMethodAllowed();
-    _isPathValid();
+    if (_method == "GET")
+      _isPathValid();
     _checkBodySize();
   }
   catch (Exception& e)
@@ -260,13 +262,13 @@ void Connection::preparePostRequest(const Event* p)
   };
   pid = fork();
   char *arr[2];
-  arr[0] = const_cast<char*>("cgi-bin/cgi.py");
+  arr[0] = const_cast<char*>("cgi/cgi.py");
   arr[1] = NULL;
   if (pid == 0)
   {
     dup2(_clientFd, STDIN_FILENO);
     dup2(_clientFd, STDOUT_FILENO);
-    execve("cgi-bin/cgi.py", arr, env);//a changer le hardcodement!
+    execve("cgi/cgi.py", arr, env);//a changer le hardcodement!
     perror("execve: ");
     exit(1);
   }
