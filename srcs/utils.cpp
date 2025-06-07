@@ -143,7 +143,9 @@ std::string listDir(const std::string& name) {
 
   while ((dirent = readdir(dirp)))
   {
-    ss << "<li><a href=\"" << dirent->d_name << "\">" << dirent->d_name << "</a></li>\n";
+    if (std::string(dirent->d_name) == "." || std::string(dirent->d_name) == "..")
+      continue;
+    ss << "<li><p>" << dirent->d_name << "</li>\n";
   }
 
   ss << "</ul>\n";
