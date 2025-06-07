@@ -19,7 +19,7 @@ Connection::Connection():
   _sockFd(-1),
 _buffer()
 {
-  // Clear the buffer
+  // Clear the buffer//
   memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
@@ -27,10 +27,9 @@ _buffer()
 Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
-  _buffer(),
-  _sockFd(-1)
+  _sockFd(-1),
+  _buffer()
 {
-  // Clear the buffer
   memset(_buffer, 0, sizeof(_buffer));
   LOG_DEBUG << "Connection created\n";
 }
@@ -89,36 +88,20 @@ void Connection::_checkBodySize() const
 
 bool Connection::isGetRequestaCGI()
 {
-  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
-  if (!location)
-  {
-    std::clog << "\nroute is not valid\n";
-    return false;
-  }
-
   const std::string prefix(location->getPrefix());
-
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
-  {
-    std::clog << "root is not valid\n";
     return false;
-  }
-
   struct stat stats = {};
   cgiPath = (*p)[0];
   p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
   if (!p || p[0].empty())
-  {
-    std::clog << "root is not valid\n";
     return false;
-  }
   cgiPath.append("/");
   cgiPath.append((*p)[0]);
   std::cout << "\ncgiPath is " << cgiPath << "\n";
   stat(cgiPath.c_str(), &stats);
-
-  if (!access(cgiPath.c_str(), X_OK))//exists and grants execution permissions!
+  if (!access(cgiPath.c_str(), X_OK))
   {
     if (!S_ISDIR(stats.st_mode))
     {
@@ -128,7 +111,6 @@ bool Connection::isGetRequestaCGI()
   }
   return false;
 }
-
 
 std::string Connection::getContentType()
 {
@@ -152,36 +134,61 @@ std::string Connection::getContentType()
       return "text/plain";
 }
 
-
-bool Connection::prepareEnvForGetCGI()
+void Connection::sendToGetCGI(std::vector<char*> env)
 {
-  const LocationBlock* location = _searcher->getLocation(_sockFd, _host, _path.c_str());
-  if (!location)
-  {
-    std::clog << "\nroute is not valid\n";
-    return false;
-  }
+  int pid;
+  char *arr[2];
 
+  pid = fork();
+  arr[0] = const_cast<char*>(cgiPath.c_str());
+  arr[1] = NULL;
+  if (pid == 0)
+  {
+    close(1);
+    dup2(_clientFd, 1);
+    execve(cgiPath.c_str(), arr, env.data());
+    perror("execve: ");
+    exit(1);//faut le changer?
+  }
+  else if (pid < 0)
+  {
+    close(_clientFd);
+    _manager->unregisterEvent(_clientFd);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+  }
+  wait(NULL);
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+}
+
+std::vector<char*> Connection::createMinEnv()
+{
+  std::vector<std::string> envStorage;
+  std::vector<char*> env;
+  std::ostringstream s;
+  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  int fileLenght = MyReadFile.tellg();
+  MyReadFile.close();
+  s << fileLenght;
+  std::string contentLength(s.str());
+  std::string contentType = getContentType();
+  envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
+  envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
+  envStorage.push_back("QUERY_STRING=" + absPath);
+  for (size_t i = 0; i < envStorage.size(); ++i)
+    env.push_back(const_cast<char*>(envStorage[i].c_str()));
+  env.push_back(NULL);
+  return env;
+}
+
+int Connection::prepareEnvForGetCGI()
+{
   std::vector<std::string> envStorage;
   std::vector<char*> env;
   const ConfigType::CgiParams &p = location->getCgiParams();
   int size = p.size();
-  if (!size)
-  {
-    std::ostringstream s;
-    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
-    int fileLenght = MyReadFile.tellg();
-    MyReadFile.close();
-    s << fileLenght;
-    std::string contentLength(s.str());
-    std::string contentType = getContentType();
-    envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
-    envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
-    envStorage.push_back("QUERY_STRING=" + absPath);
-    for (size_t i = 0; i < envStorage.size(); ++i)
-      env.push_back(const_cast<char*>(envStorage[i].c_str()));
-    env.push_back(NULL);
-  }
+  if (size == 0)
+    env = createMinEnv();
   else
   {
     for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
@@ -191,34 +198,8 @@ bool Connection::prepareEnvForGetCGI()
       env.push_back(const_cast<char*>(envStorage[i].c_str()));
     env.push_back(NULL);
   }
-
-  int pid;
-
-  pid = fork();
-
-  char *arr[2];
-  arr[0] = const_cast<char*>(cgiPath.c_str());
-  arr[1] = NULL;
-
-  if (pid == 0)
-  {
-    close(1);
-    dup2(_clientFd, 1);
-    execve(cgiPath.c_str(), arr, env.data());
-    perror("execve: ");
-    exit(1);
-  }
-  else if (pid < 0)
-  {
-
-    close(_clientFd);
-    _manager->unregisterEvent(_clientFd);
-    return false;
-  }
-  wait(NULL);
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
-  return true;
+  sendToGetCGI(env);
+  return(0);
 }
 
 void Connection::_isMethodAllowed() const
@@ -237,113 +218,131 @@ void Connection::_isMethodAllowed() const
     throw Exception(ErrorMessages::E_BAD_METHOD, 405);
 }
 
+
+void Connection::prepareResponse(const Event* p)
+{
+  try
+  {
+    extractHeaders();
+    storeHeaders();
+    _isMethodAllowed();
+    _isPathValid();
+    _checkBodySize();
+  }
+  catch (Exception& e)
+  {
+    LOG_WARNING << e.what();
+    handleError(e.errnum());
+  }
+  _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
+}
+
+
+void Connection::preparePostRequest(const Event* p)
+{
+  std::string line;
+  line = _headers["content-type"];
+  std::string key_1 = "content-type=";
+  key_1.append(line);
+  const char* ct = key_1.c_str();
+  line = _headers["content-length"];
+  std::string key_2 = "content-length=";
+  key_2.append(line);
+  const char* cl = key_2.c_str();
+
+  int pid;
+
+  char* env[] =
+  {
+    const_cast<char*>(ct),
+    const_cast<char*>(cl),
+    NULL
+  };
+  pid = fork();
+  char *arr[2];
+  arr[0] = const_cast<char*>("cgi-bin/cgi.py");
+  arr[1] = NULL;
+  if (pid == 0)
+  {
+    dup2(_clientFd, STDIN_FILENO);
+    dup2(_clientFd, STDOUT_FILENO);
+    execve("cgi-bin/cgi.py", arr, env);//a changer le hardcodement!
+    perror("execve: ");
+    exit(1);
+  }
+  else if (pid < 0)
+  {
+    close(_clientFd);
+    _manager->unregisterEvent(_clientFd);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+  }
+  wait(NULL);
+  _manager->unregisterEvent(p->getFd());
+  close(p->getFd());
+}
+
+void Connection::prepareDeleteRequest(const Event* p)
+{
+  std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
+  str.append(_path);
+  std::clog << _path;
+  int result = remove(str.c_str());
+  if (result == 0)
+  {
+    const std::string e501 =
+      "HTTP/1.1 200 OK\r\n"
+      "Content-Type: text/html; charset=UTF-8\r\n"
+      "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+      "Content-Length: 1234\r\n\r\n"
+      "<html>"
+      "<body>"
+      "<h1>File file.html deleted.</h1>"
+      "</body>"
+      "</html>";
+    send(_clientFd, e501.c_str(), e501.size(), 0);
+  }
+  std::clog << result;
+  _manager->unregisterEvent(p->getFd());
+  close(p->getFd());
+}
+
+
+bool Connection::isNotEmpty(const Event* p)
+{
+  if (!_ErrResponse.empty())
+  {
+    send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
+    _manager->unregisterEvent(p->getFd());
+    close(p->getFd());
+    return false;
+  }
+  if (!_listDir.empty())
+  {
+    send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
+    _manager->unregisterEvent(p->getFd());
+    close(p->getFd());
+    return false;
+  }
+  return true;
+}
+
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (flags & EPOLLIN)
   {
-    try
-    {
-      extractHeaders();
-      storeHeaders();
-      _isMethodAllowed();
-      _isPathValid();
-      _checkBodySize();
-    }
-    catch (Exception& e)
-    {
-      LOG_WARNING << e.what();
-      handleError(e.errnum());
-    }
-
-    _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
-    return 0;
+    prepareResponse(p);
   }
-  if (flags & EPOLLOUT)
+  else if (flags & EPOLLOUT && isNotEmpty(p))
   {
-    if (!_ErrResponse.empty())
-    {
-      send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-      return 0;
-    }
-
-    if (!_listDir.empty())
-    {
-      send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-      return 0;
-    }
-
     if (_method == "POST")
-    {
-      std::string line;
-
-      line = _headers["content-type"];
-      std::string key_1 = "content-type=";
-      key_1.append(line);
-      const char* ct = key_1.c_str();
-      line = _headers["content-length"];
-      std::string key_2 = "content-length=";
-      key_2.append(line);
-      const char* cl = key_2.c_str();
-
-      int pid;
-
-      char* env[] =
-      {
-        const_cast<char*>(ct),
-        const_cast<char*>(cl),
-        NULL
-      };
-
-      pid = fork();
-
-      
-      if (pid == 0)
-      {
-        dup2(_clientFd, STDIN_FILENO);
-        dup2(_clientFd, STDOUT_FILENO);
-        execve("cgi-bin/cgi.py", (char*[]){"cgi-bin/cgi.py", NULL}, env);
-        perror("execve: ");
-        exit(1);
-      }
-      wait(NULL);
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-    }
-    if (_method == "DELETE")
-    {
-      std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
-      str.append(_path);
-      std::clog << _path;
-      int result = remove(str.c_str());
-      if (result == 0)
-      {
-        const std::string e501 =
-          "HTTP/1.1 200 OK\r\n"
-          "Content-Type: text/html; charset=UTF-8\r\n"
-          "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-          "Content-Length: 1234\r\n\r\n"
-          "<html>"
-          "<body>"
-          "<h1>File file.html deleted.</h1>"
-          "</body>"
-          "</html>";
-        send(_clientFd, e501.c_str(), e501.size(), 0);
-      }
-      std::clog << result;
-      _manager->unregisterEvent(p->getFd());
-      close(p->getFd());
-    }
+      preparePostRequest(p);
+    else if (_method == "DELETE")
+      prepareDeleteRequest(p);
     else
     {
-      if (isGetRequestaCGI())
-      {
-        prepareEnvForGetCGI();
-        return 0;
-      }
+      if (!_continueReadingFile && isGetRequestaCGI())
+        return (prepareEnvForGetCGI());
+      _continueReadingFile = true;
       readFILE();
     }
   }
@@ -376,8 +375,7 @@ bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 
 void Connection::_isPathValid()
 {
-  const LocationBlock* location =
-    _searcher->getLocation(_sockFd, _host, _path);
+  location = _searcher->getLocation(_sockFd, _host, _path);
 
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
@@ -428,46 +426,47 @@ void Connection::_isPathValid()
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
 }
 
+
+void Connection::sendResponseHeaders()
+{
+  MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
+  int fileLenght = MyReadFile.tellg();
+  MyReadFile.seekg(0, MyReadFile.beg);
+  std::string contentType = getContentType();
+  std::ostringstream headers;
+  headers << "HTTP/1.1 200 OK\r\n"
+    << "Content-Length: " << fileLenght << "\r\n"
+    << "Content-Type: " << contentType << "\r\n"
+    << "Connection: close\r\n"
+    << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
+    << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
+  std::string headers_buff = headers.str();
+  send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
+}
+
+
 int Connection::readFILE()
 {
-  static int flag;
-
-  if (MyReadFile.gcount() == 0 && flag == 0)
+  if (_areHeadersSent == false)
   {
-    MyReadFile.open( absPath.c_str(), std::ios::binary | std::ios::ate);
-    int fileLenght = MyReadFile.tellg();
-    MyReadFile.seekg(0, MyReadFile.beg);
-    std::string contentType = getContentType();
-
-    std::ostringstream headers;
-    headers << "HTTP/1.1 200 OK\r\n"
-      << "Content-Length: " << fileLenght << "\r\n"
-      << "Content-Type: " << contentType << "\r\n"
-      << "Connection: close\r\n"
-      << "Last-Modified: Mon, 23 Mar 2020 02:49:28 GMT\r\n"
-      << "Expires: Sun, 17 Jan 2038 19:14:07 GMT\r\n\r\n";
-    std::string headers_buff = headers.str();
-
-    send(_clientFd, headers_buff.data(), headers_buff.size(), 0);
-    flag = 1;
-    return (0);
+    sendResponseHeaders();
+    _areHeadersSent = true;
+    return 0;
   }
-
   MyReadFile.read(_buffer, sizeof(_buffer));
-
   if (MyReadFile.gcount() > 0)
   {
     send(_clientFd, _buffer, MyReadFile.gcount(), 0);
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
-
-  std::clog << "\nEnd of file!!\n";
   MyReadFile.close();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
-  flag = 0;
+  _areHeadersSent = false;
+  _continueReadingFile = false;
   memset(_buffer, 0, sizeof(_buffer));
+  std::clog << "\nEnd of file!!\n";
   return 0;
 }
 
@@ -491,6 +490,7 @@ const std::string& Connection::getErrorMessage(const int errnum)
 
   return unknown_error_str;
 }
+
 
 void Connection::_defaultErrorPage(const int errnum)
 {
@@ -534,11 +534,8 @@ void Connection::handleError(const int errnum)
 
   const ConfigType::ErrorPage* errorPages;
 
-  const LocationBlock* loc =
-    _searcher->getLocation(_sockFd, _host, _path);
-
-  if (loc && !loc->getErrorPages()->empty())
-    errorPages = loc->getErrorPages();
+  if (location && !location->getErrorPages()->empty())
+    errorPages = location->getErrorPages();
   else
     errorPages = _searcher->getDefaultServer(_sockFd, _host).getErrorPages();
 

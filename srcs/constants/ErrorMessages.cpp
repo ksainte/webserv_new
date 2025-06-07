@@ -80,3 +80,6 @@ const char* ErrorMessages::E_HEADERS_TOO_LONG =
 
 const char* ErrorMessages::E_MAX_BODY_SIZE =
   "request body size exceed maximum";
+
+const char* ErrorMessages::E_FORK_FAILED =
+  "forking the child failed - closing current connection";
