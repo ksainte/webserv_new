@@ -237,8 +237,8 @@ void Connection::prepareResponse(const Event* p)
     _checkBodySize();
     if (isRequestaCGI())
       _requestIsACGI = true;
-    if (!_requestIsACGI && _method == "POST")
-      throw Exception(ErrorMessages::E_BAD_METHOD, 405);
+    // if (!_requestIsACGI && _method == "POST")
+    //   throw Exception(ErrorMessages::E_BAD_METHOD, 405);
   } 
   catch (Exception& e)
   {
