@@ -11,6 +11,7 @@ public:
   ~ConnectionManager();
 
   int initNewConnection(int clientFd, int sockFd);
+  void checkConnectionTimeouts();
 
 private:
   const Epoll& _eventManager;

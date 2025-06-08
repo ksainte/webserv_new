@@ -37,9 +37,10 @@ int main(const int argc, char **argv)
     const Config config(tokenizer.ft_get_token_list());
     Searcher searcher(config);
     Epoll eventManager;
-	  ConnectionManager connManager(searcher, eventManager);
-	  Listener listener(searcher.getAddresses(), eventManager, connManager);
-	  eventManager.wait();
+	ConnectionManager connManager(searcher, eventManager);
+	eventManager.setConnectionManager(&connManager);	
+	Listener listener(searcher.getAddresses(), eventManager, connManager);
+	eventManager.wait();
   }
   catch (const std::exception& e)
   {

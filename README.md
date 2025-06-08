@@ -19,6 +19,8 @@ cgi env    check that env var name contains only alphanumeric character
 
 post    send a 200 Ok response even when there is no cgi
 
+execve send response when cgi file not found 
+
 # Eval 
 
 ## Config File

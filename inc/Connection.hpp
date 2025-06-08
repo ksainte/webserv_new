@@ -5,6 +5,7 @@
 #include "../inc/Event.hpp"
 #include "../inc/Request.hpp"
 #include "../inc/Searcher.hpp"
+#include <sys/time.h>
 
 class Epoll;
 class ConnectionManager;
@@ -26,6 +27,10 @@ class Connection : public virtual IEventHandler, public Request
 
   // 50MB
   static const int _defaultMaxBodySize = 50 * 1000 * 1000;
+  
+  // Timeout configuration (in seconds)
+  static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
+  static const int _defaultCgiTimeout = 5;       // 5 seconds for CGI requests
 
   Epoll* _manager;
   Searcher* _searcher;
@@ -57,6 +62,16 @@ class Connection : public virtual IEventHandler, public Request
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];
+  
+  // Timeout tracking
+  struct timeval _requestStartTime;
+  bool _requestStarted;
+  
+  // Timeout helper methods
+  void _startRequestTimer();
+  bool _isRequestTimedOut() const;
+  double _getElapsedTime() const;
+  void _handleRequestTimeout();
 
   static const std::string& getErrorMessage(int errnum);
 
@@ -67,6 +82,7 @@ class Connection : public virtual IEventHandler, public Request
     m[403] = "403 Forbidden";
     m[404] = "404 Not Found";
     m[405] = "405 Method Not Allowed";
+    m[408] = "408 Request Timeout";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
     m[502] = "502 Bad Gateway";
@@ -92,6 +108,10 @@ public:
   void setEvent();
   void setSockFd(int sockFd);
   void setClientFd(int clientFd);
+  
+  // Public timeout methods
+  bool isTimedOut() const;
+  void resetTimeout();
 
 };
 #endif

@@ -42,3 +42,14 @@ ConnectionManager::~ConnectionManager()
 {
 	LOG_DEBUG << "Connection Manager destroyed\n";
 }
+
+void ConnectionManager::checkConnectionTimeouts()
+{
+	for (int i = 0; i < _numCon; ++i)
+	{
+		if (connection[i].isTimedOut())
+		{
+			LOG_WARNING << "Connection " << i << " has timed out, cleaning up\n";
+		}
+	}
+}

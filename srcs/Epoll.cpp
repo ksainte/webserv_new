@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "../inc/Epoll.hpp"
 #include "../inc/IEventHandler.hpp"
+#include "../inc/ConnectionManager.hpp"
 #include "../inc/constants/ErrorMessages.hpp"
 #include "../inc/constants/SuccessMessages.hpp"
 #include "../inc/Logger.hpp"
@@ -47,7 +48,7 @@ void	Epoll::unregisterEvent(const int fd) const
 	LOG_DEBUG << SuccessMessages::S_EPOLL_CTL_DEL;
 }
 
-Epoll::Epoll() : _epfd(epoll_create1(0)), _events()
+Epoll::Epoll() : _epfd(epoll_create1(0)), _events(), _connectionManager(NULL)
 {
 	if (_epfd == -1)
 	{
@@ -61,7 +62,8 @@ void	Epoll::wait()
 {
 	while (getSigIntFlag() == false)
 	{
-		const int numEvent = epoll_wait(_epfd, _events, SIZE, 0);
+		// Use 1000ms timeout for epoll_wait to allow timeout checking
+		const int numEvent = epoll_wait(_epfd, _events, SIZE, 1000);
 	
 		if (numEvent == -1)
 		{
@@ -78,6 +80,12 @@ void	Epoll::wait()
 				close(event->getFd());
 			}
 		}
+		
+		// Check for connection timeouts when there are no events or periodically
+		if (_connectionManager && numEvent == 0)
+		{
+			_connectionManager->checkConnectionTimeouts();
+		}
 	}
 }
 
@@ -90,3 +98,9 @@ Epoll::~Epoll()
 int Epoll::getEpfd() const {return _epfd;}
 int Epoll::getSize() {return SIZE;}
 const epoll_event*	Epoll::getEvents() const {return _events;}
+
+void Epoll::setConnectionManager(ConnectionManager* connManager)
+{
+	_connectionManager = connManager;
+	LOG_DEBUG << "ConnectionManager set for timeout monitoring\n";
+}
