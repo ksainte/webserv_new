@@ -18,7 +18,7 @@ class Connection : public virtual IEventHandler, public Request
   void _isMethodAllowed() const;
   static void _isHttpVersionSupported(const std::string& version) ;
 
-  bool isGetRequestaCGI();
+  bool isRequestaCGI();
   int send_to_cgi(const char * absPath);
   int readFILE();
 
@@ -37,17 +37,23 @@ class Connection : public virtual IEventHandler, public Request
   std::string absPath;
   std::string cgiPath;
   std::string getContentType();
+  std::vector<std::string> envStorage;
+  std::vector<char*> env;
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
-  void preparePostRequest(const Event* p);
+  void prepareEnvforPostCGI();
   void prepareDeleteRequest(const Event* p);
   bool isNotEmpty(const Event* p);
   const LocationBlock* location;
-  void sendToGetCGI(std::vector<char*> env);
+  void sendToGetCGI();
+  void sendToPostCGI();
   bool _continueReadingFile;
+  bool _requestIsACGI;
   bool _areHeadersSent;
   void sendResponseHeaders();
-  std::vector<char*> createMinEnv();
+  void createMinGetEnv();
+  void createMinPostEnv();
+  void test();
 
   //GET
   std::ifstream MyReadFile;

@@ -99,10 +99,13 @@ void Connection::_checkBodySize() const
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
-bool Connection::isGetRequestaCGI()
+bool Connection::isRequestaCGI()
 {
-  if (_path.find('?') == std::string::npos) return false;
-  const std::string prefix(location->getPrefix());
+  // if (_path.find('?') == std::string::npos) return false;
+  location = _searcher->getLocation(_sockFd, _host, _path);
+  if (!location)
+    throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+  const std::string prefix(location->getPrefix());//faut gere ca!
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
     return false;
@@ -113,7 +116,6 @@ bool Connection::isGetRequestaCGI()
     return false;
   cgiPath.append("/");
   cgiPath.append((*p)[0]);
-  std::cout << "\ncgiPath is " << cgiPath << "\n";
   stat(cgiPath.c_str(), &stats);
   if (!access(cgiPath.c_str(), X_OK))
   {
@@ -148,7 +150,7 @@ std::string Connection::getContentType()
     return "text/plain";
 }
 
-void Connection::sendToGetCGI(std::vector<char*> env)
+void Connection::sendToGetCGI()
 {
   int pid;
   char* arr[2];
@@ -156,6 +158,7 @@ void Connection::sendToGetCGI(std::vector<char*> env)
   pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
+  std::cout << "cgipath is " << cgiPath << "\n";
   if (pid == 0)
   {
     close(1);
@@ -175,10 +178,10 @@ void Connection::sendToGetCGI(std::vector<char*> env)
   close(_clientFd);
 }
 
-std::vector<char*> Connection::createMinEnv()
+void Connection::createMinGetEnv()
 {
-  std::vector<std::string> envStorage;
-  std::vector<char*> env;
+  envStorage.clear();
+  env.clear();
   std::ostringstream s;
   MyReadFile.open(absPath.c_str(), std::ios::binary | std::ios::ate);
   int fileLenght = MyReadFile.tellg();
@@ -189,30 +192,18 @@ std::vector<char*> Connection::createMinEnv()
   envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
   envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
   envStorage.push_back("QUERY_STRING=" + absPath);
-  for (size_t i = 0; i < envStorage.size(); ++i)
-    env.push_back(const_cast<char*>(envStorage[i].c_str()));
-  env.push_back(NULL);
-  return env;
 }
 
 int Connection::prepareEnvForGetCGI()
 {
-  std::vector<std::string> envStorage;
-  std::vector<char*> env;
+  createMinGetEnv();
   const ConfigType::CgiParams& p = location->getCgiParams();
-  int size = p.size();
-  if (size == 0)
-    env = createMinEnv();
-  else
-  {
-    for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
-      envStorage.push_back(it->first + "=" + it->second);
-    envStorage.push_back("QUERY_STRING=" + absPath);
-    for (size_t i = 0; i < envStorage.size(); ++i)
-      env.push_back(const_cast<char*>(envStorage[i].c_str()));
-    env.push_back(NULL);
-  }
-  sendToGetCGI(env);
+  for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
+    envStorage.push_back(it->first + "=" + it->second);
+  for (size_t i = 0; i < envStorage.size(); ++i)
+    env.push_back(const_cast<char*>(envStorage[i].c_str()));
+  env.push_back(NULL);
+  sendToGetCGI();
   return (0);
 }
 
@@ -244,7 +235,11 @@ void Connection::prepareResponse(const Event* p)
     if (_method == "GET")
       _isPathValid();
     _checkBodySize();
-  }
+    if (isRequestaCGI())
+      _requestIsACGI = true;
+    if (!_requestIsACGI && _method == "POST")
+      throw Exception(ErrorMessages::E_BAD_METHOD, 405);
+  } 
   catch (Exception& e)
   {
     LOG_WARNING << e.what();
@@ -253,35 +248,19 @@ void Connection::prepareResponse(const Event* p)
   _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
 }
 
-void Connection::preparePostRequest(const Event* p)
+void Connection::sendToPostCGI()
 {
-  std::string line;
-  line = _headers["content-type"];
-  std::string key_1 = "content-type=";
-  key_1.append(line);
-  const char* ct = key_1.c_str();
-  line = _headers["content-length"];
-  std::string key_2 = "content-length=";
-  key_2.append(line);
-  const char* cl = key_2.c_str();
-
   int pid;
 
-  char* env[] =
-  {
-    const_cast<char*>(ct),
-    const_cast<char*>(cl),
-    NULL
-  };
   pid = fork();
   char *arr[2];
-  arr[0] = const_cast<char*>("cgi/cgi.py");
+  arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
   if (pid == 0)
   {
     dup2(_clientFd, STDIN_FILENO);
     dup2(_clientFd, STDOUT_FILENO);
-    execve("cgi/cgi.py", arr, env);//a changer le hardcodement!
+    execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
     exit(1);
   }
@@ -292,8 +271,29 @@ void Connection::preparePostRequest(const Event* p)
     throw Exception(ErrorMessages::E_FORK_FAILED, 404);
   }
   wait(NULL);
-  _manager->unregisterEvent(p->getFd());
-  close(p->getFd());
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+}
+
+void Connection::createMinPostEnv()
+{
+  envStorage.clear();
+  env.clear();
+  envStorage.push_back("PATH_INFO=" + cgiPath);
+  envStorage.push_back("CONTENT_TYPE=" + _headers["content-type"]);
+  envStorage.push_back("CONTENT_LENGTH=" + _headers["content-length"]);
+}
+
+void Connection::prepareEnvforPostCGI()
+{
+  createMinPostEnv();
+  const ConfigType::CgiParams& params = location->getCgiParams();
+  for (ConfigType::CgiParams::const_iterator it = params.begin(); it != params.end(); ++it)
+    envStorage.push_back(it->first + "=" + it->second);
+  for (size_t i = 0; i < envStorage.size(); ++i)
+    env.push_back(const_cast<char*>(envStorage[i].c_str()));
+  env.push_back(NULL);
+  sendToPostCGI();
 }
 
 void Connection::prepareDeleteRequest(const Event* p)
@@ -349,14 +349,13 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   else if (flags & EPOLLOUT && isNotEmpty(p))
   {
     if (_method == "POST")
-      preparePostRequest(p);
+      prepareEnvforPostCGI();
     else if (_method == "DELETE")
       prepareDeleteRequest(p);
     else
     {
-      if (!_continueReadingFile && isGetRequestaCGI())
+      if (_requestIsACGI)
         return (prepareEnvForGetCGI());
-      _continueReadingFile = true;
       readFILE();
     }
   }
@@ -476,7 +475,6 @@ int Connection::readFILE()
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   _areHeadersSent = false;
-  _continueReadingFile = false;
   memset(_buffer, 0, sizeof(_buffer));
   std::clog << "\nEnd of file!!\n";
   return 0;
