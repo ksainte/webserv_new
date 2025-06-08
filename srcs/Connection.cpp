@@ -158,7 +158,6 @@ void Connection::sendToGetCGI()
   pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
-  std::cout << "cgipath is " << cgiPath << "\n";
   if (pid == 0)
   {
     close(1);
