@@ -17,7 +17,7 @@ add request timeout
 
 cgi env    check that env var name contains only alphanumeric character
 
-
+post    send a 200 Ok response even when there is no cgi
 
 # Eval 
 

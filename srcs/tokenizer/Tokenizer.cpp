@@ -119,7 +119,7 @@ int Tokenizer::ft_check_basic_syntax()
     left_brackets = 0;
     int size =  _tokens_list.size();
     if (!size)
-        return (printError(CONFIG_EMPTY));   
+        return (printError(CONFIG_EMPTY));
     std::cout << "mylist contains:\n";
     it = _tokens_list.begin();
     while (it != _tokens_list.end())
