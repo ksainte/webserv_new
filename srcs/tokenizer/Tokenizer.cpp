@@ -40,6 +40,8 @@ int Tokenizer::printError(int err)
         std::cerr << "\nSyntax Error: The allowed methods are GET, POST, and DELETE!\n";
     if (err == DBL_METHOD)
         std::cerr << "\nSyntax Error: There is a doublure in the type of methods!\n";
+    if (err == CONFIG_EMPTY)
+        std::cerr << "\nError: Config File is empty!\n";
     return (0);
 }
 
@@ -115,6 +117,9 @@ int Tokenizer::ft_check_basic_syntax()
     int left_brackets;
 
     left_brackets = 0;
+    int size =  _tokens_list.size();
+    if (!size)
+        return (printError(CONFIG_EMPTY));   
     std::cout << "mylist contains:\n";
     it = _tokens_list.begin();
     while (it != _tokens_list.end())
