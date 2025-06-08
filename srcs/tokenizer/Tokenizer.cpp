@@ -115,12 +115,12 @@ int Tokenizer::ft_check_basic_syntax()
     int left_brackets;
 
     left_brackets = 0;
-    std::cout << "mylist contains:\n";
+    // std::cout << "mylist contains:\n";
     it = _tokens_list.begin();
     while (it != _tokens_list.end())
     {
-        std::cout << "type is " << (*it).type;
-        std::cout << "\nvalue is " << (*it).value;
+        // std::cout << "type is " << (*it).type;
+        // std::cout << "\nvalue is " << (*it).value;
         t2 = (*it).type;
         if (t2 == Token::LBRACE && !(ft_check_brackets(t2, left_brackets)))
             return (printError(BRACKETS));
@@ -129,7 +129,7 @@ int Tokenizer::ft_check_basic_syntax()
         if (it != _tokens_list.begin())
         {
             --it;
-            std::cout << "\nThe previous element is " << (*it).type << '\n';
+            // std::cout << "\nThe previous element is " << (*it).type << '\n';
             t1 = (*it).type;
             ++it;
             if (t1 == t2 && t1 == Token::SEMICOLON)
@@ -137,11 +137,11 @@ int Tokenizer::ft_check_basic_syntax()
             if ((t1 == Token::SEMICOLON && t2 == Token::LBRACE) || ((t1 == Token::RBRACE || t1 == Token::LBRACE) && t2 == Token::SEMICOLON))
                 return (printError(BAD_SEMICOLONS));
         }
-        std::cout << "\nnext token:\n";
+        // std::cout << "\nnext token:\n";
         it++;
         // std::cout << "left brackets are " <<left_brackets << "\n";
     }
-    std::cout << "----------------";
+    // std::cout << "----------------";
     if (left_brackets == 0)
         return (1);
     return (printError(Token::LBRACE));
@@ -185,9 +185,9 @@ int Tokenizer::ft_compare_with_table(std::string value, std::list<Token>::iterat
         {
             if (value == server_block[i])
             {
-                std::cout << "Matched directive in server block!\n";
+                // std::cout << "Matched directive in server block!\n";
                 (*it).type = Token::DIRECTIVE;
-                std::cout << "New type is " << (*it).type << "\n";
+                // std::cout << "New type is " << (*it).type << "\n";
                 return (1);
             }
             i++;
@@ -199,18 +199,18 @@ int Tokenizer::ft_compare_with_table(std::string value, std::list<Token>::iterat
         {
             if (value == location_block[i])
             {
-                std::cout << "Matched directive in location block!\n";
+                // std::cout << "Matched directive in location block!\n";
                 (*it).type = Token::DIRECTIVE;
-                std::cout << "New type is " << (*it).type << "\n";
+                // std::cout << "New type is " << (*it).type << "\n";
                 return (1);
             }
             i++;
         }
     }
-    if (flag_location_block == 0)
-        std::cout << "\nSever block issue: " << (*it).value << "\n";
-    else
-        std::cout << "\nLocation block issue: " << (*it).value << "\n";
+    // if (flag_location_block == 0)
+        // std::cout << "\nSever block issue: " << (*it).value << "\n";
+    // else
+        // std::cout << "\nLocation block issue: " << (*it).value << "\n";
     return (0);
 }
 
@@ -354,11 +354,11 @@ int Tokenizer::ft_check_directives(std::list<Token>::iterator &it)
     }
     while (it != _tokens_list.end())//1 2 3 dir 4
     {
-        std::cout << "\ntype is " << (*it).type;
-        std::cout << "\nvalue is " << (*it).value;
+        // std::cout << "\ntype is " << (*it).type;
+        // std::cout << "\nvalue is " << (*it).value;
         t2 = (*it).type;//current token
         it--;
-        std::cout << "\nThe previous element is " << (*it).type << '\n';
+        // std::cout << "\nThe previous element is " << (*it).type << '\n';
         t1 = (*it).type;//previous token
         t1_value = (*it).value;
         it++;//current
@@ -382,7 +382,7 @@ int Tokenizer::ft_check_directives(std::list<Token>::iterator &it)
             t2_value = (*it).value;
             it--;//sur la location
             (*it).value = t2_value;
-            std::cout << "Previous Type :" << (*it).type << " has New Value :" << (*it).value << "\n";
+            // std::cout << "Previous Type :" << (*it).type << " has New Value :" << (*it).value << "\n";
             it++;//back on the string
             (*it).type = Token::INVALID;//make this string invalid! for later iteration!
             flag_location_block = 1;
@@ -396,7 +396,7 @@ int Tokenizer::ft_check_directives(std::list<Token>::iterator &it)
             if (!(flag_valid_server_block))
                 return (printError(NO_LISTEN));
             it++;// passer au server suivant ou sur null si fin!
-            std::cout << "\n-----------Check new server block---------\n";
+            // std::cout << "\n-----------Check new server block---------\n";
             if (!(ft_check_directives(it)))
                 return (0);
             return (1);
@@ -441,14 +441,14 @@ Tokenizer::Tokenizer(std::string file) : _len()
         fileIn.close();
         throw std::runtime_error("");
     }
-    std::cout << "DIRECTIVES-------------\n";
+    // std::cout << "DIRECTIVES-------------\n";
     if (!(ft_check_server_blocks()))
     {
         fileIn.close();
         throw std::runtime_error("");
     }
-    else
-        std::cout << "\nok!\n";
+    // else
+        // std::cout << "\nok!\n";
 
     fileIn.close();
 }
