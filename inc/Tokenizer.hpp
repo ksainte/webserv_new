@@ -20,6 +20,7 @@
 #define LOCATION_STRUCT 15
 #define INVALID_METHOD 16
 #define DBL_METHOD 17
+#define CONFIG_EMPTY 18
 
 
 // typedef enum s_token_type
