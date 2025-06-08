@@ -179,10 +179,7 @@ void Connection::sendToCGI()
   {
     if (_method == "POST")
       dup2(_clientFd, STDIN_FILENO);
-    
-    // Always redirect stdout to client for both GET and POST
-    dup2(_clientFd, STDOUT_FILENO);
-    
+    dup2(_clientFd, STDOUT_FILENO);    
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
     exit(1);
@@ -306,6 +303,17 @@ void Connection::createMinPostEnv()
 
 void Connection::prepareEnvforPostCGI()
 {
+  if (!_requestIsACGI)
+  {
+    std::ostringstream oss;
+    oss << "HTTP/1.1 200 OK\r\n"
+        << "\r\n";   
+    send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
+    _manager->unregisterEvent(_clientFd);
+    close(_clientFd);
+    resetTimeout();
+    return ;
+  }
   createMinPostEnv();
   const ConfigType::CgiParams& params = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = params.begin(); it != params.end(); ++it)
@@ -415,7 +423,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   {
     try
     {
-      if (_requestIsACGI && _method == "POST")
+      if (_method == "POST")
         prepareEnvforPostCGI();
       else if (_method == "DELETE")
         prepareDeleteRequest();

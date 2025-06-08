@@ -29,8 +29,8 @@ class Connection : public virtual IEventHandler, public Request
   static const int _defaultMaxBodySize = 50 * 1000 * 1000;
   
   // Timeout configuration (in seconds)
-  static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 5;       // 5 seconds for CGI requests
+  static const int _defaultRequestTimeout = 5;  // 30 seconds for regular requests
+  static const int _defaultCgiTimeout = 10;       // 5 seconds for CGI requests
 
   Epoll* _manager;
   Searcher* _searcher;
