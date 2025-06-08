@@ -18,7 +18,7 @@ class Connection : public virtual IEventHandler, public Request
   void _isMethodAllowed() const;
   static void _isHttpVersionSupported(const std::string& version) ;
 
-  bool isRequestaCGI();
+  void isRequestaCGI();
   int send_to_cgi(const char * absPath);
   int readFILE();
 
@@ -31,6 +31,7 @@ class Connection : public virtual IEventHandler, public Request
   Searcher* _searcher;
   int _sockFd;
   Event _event;
+  std::string _rootPath;
   std::string _ErrResponse;
   std::string _listDir;
   std::string _previousLoc;
@@ -42,7 +43,7 @@ class Connection : public virtual IEventHandler, public Request
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
   void prepareEnvforPostCGI();
-  void prepareDeleteRequest(const Event* p);
+  void prepareDeleteRequest();
   bool isNotEmpty(const Event* p);
   const LocationBlock* location;
   void sendToGetCGI();
@@ -53,8 +54,7 @@ class Connection : public virtual IEventHandler, public Request
   void sendResponseHeaders();
   void createMinGetEnv();
   void createMinPostEnv();
-  void test();
-
+  void isFileToDeleteValid(int *result);
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];

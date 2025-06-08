@@ -83,3 +83,12 @@ const char* ErrorMessages::E_MAX_BODY_SIZE =
 
 const char* ErrorMessages::E_FORK_FAILED =
   "forking the child failed - closing current connection";
+
+const char* ErrorMessages::E_BAD_REQUEST =
+  "invalid request";
+
+const char* ErrorMessages::E_FORBIDDEN =
+  "forbidden request";
+
+const char* ErrorMessages::E_DELETE_FAIL =
+  "delete failed";

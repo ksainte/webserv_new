@@ -104,7 +104,7 @@ void Connection::_checkBodySize() const
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
-bool Connection::isRequestaCGI()
+void Connection::isRequestaCGI()
 {
   // if (_path.find('?') == std::string::npos) return false;
   location = _searcher->getLocation(_sockFd, _host, _path);
@@ -113,12 +113,12 @@ bool Connection::isRequestaCGI()
   const std::string prefix(location->getPrefix());//faut gere ca!
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
   if (!p || p[0].empty())
-    return false;
+    throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
   struct stat stats = {};
   cgiPath = (*p)[0];
   p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
   if (!p || p[0].empty())
-    return false;
+    return ;
   cgiPath.append("/");
   cgiPath.append((*p)[0]);
   stat(cgiPath.c_str(), &stats);
@@ -126,11 +126,12 @@ bool Connection::isRequestaCGI()
   {
     if (!S_ISDIR(stats.st_mode))
     {
-      return true;
+      _requestIsACGI = true;
+      return ;
     }
-    return false;
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
-  return false;
+  throw Exception(ErrorMessages::E_FORBIDDEN, 403);
 }
 
 std::string Connection::getContentType()
@@ -239,10 +240,7 @@ void Connection::prepareResponse(const Event* p)
     if (_method == "GET")
       _isPathValid();
     _checkBodySize();
-    if (isRequestaCGI())
-      _requestIsACGI = true;
-    // if (!_requestIsACGI && _method == "POST")
-    //   throw Exception(ErrorMessages::E_BAD_METHOD, 405);
+    isRequestaCGI();
   } 
   catch (Exception& e)
   {
@@ -300,29 +298,59 @@ void Connection::prepareEnvforPostCGI()
   sendToPostCGI();
 }
 
-void Connection::prepareDeleteRequest(const Event* p)
+void Connection::isFileToDeleteValid(int *result)
 {
-  std::string str = "/home/ks19/Apps/19/webserv_Kev_branch_working_21_May";
-  str.append(_path);
-  std::clog << _path;
-  int result = remove(str.c_str());
+  const std::string prefix(location->getPrefix());
+  const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
+  if (!p || p[0].empty())
+    throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+  struct stat stats = {};
+  _rootPath = (*p)[0];
+  _rootPath.append("/");
+  _rootPath.append(_path);
+  stat(_rootPath.c_str(), &stats);
+
+  if (!access(_rootPath.c_str(), W_OK))
+  {
+    if (!S_ISDIR(stats.st_mode))
+    {
+      *result = remove(_rootPath.c_str());
+      return ;
+    }
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+  }
+  throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+}
+
+
+void Connection::prepareDeleteRequest()
+{
+  int result;
+  
+  isFileToDeleteValid(&result);
   if (result == 0)
   {
-    const std::string e501 =
-      "HTTP/1.1 200 OK\r\n"
-      "Content-Type: text/html; charset=UTF-8\r\n"
-      "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-      "Content-Length: 1234\r\n\r\n"
-      "<html>"
-      "<body>"
-      "<h1>File file.html deleted.</h1>"
-      "</body>"
-      "</html>";
-    send(_clientFd, e501.c_str(), e501.size(), 0);
+    const std::string body =
+    "<html>"
+    "<body>"
+    "<h1>File deleted.</h1>"
+    "</body>"
+    "</html>";
+  
+  std::ostringstream oss;
+  oss << "HTTP/1.1 200 OK\r\n"
+      << "Content-Type: text/html; charset=UTF-8\r\n"
+      << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+      << "Content-Length: " << body.size() << "\r\n"
+      << "\r\n"
+      << body;
+  
+  send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
   }
-  std::clog << result;
-  _manager->unregisterEvent(p->getFd());
-  close(p->getFd());
+  else
+    throw Exception(ErrorMessages::E_DELETE_FAIL, 500);
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
 }
 
 bool Connection::isNotEmpty(const Event* p)
@@ -352,15 +380,23 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
   }
   else if (flags & EPOLLOUT && isNotEmpty(p))
   {
-    if (_method == "POST")
-      prepareEnvforPostCGI();
-    else if (_method == "DELETE")
-      prepareDeleteRequest(p);
-    else
+    try
     {
-      if (_requestIsACGI)
-        return (prepareEnvForGetCGI());
-      readFILE();
+      if (_requestIsACGI && _method == "POST")
+        prepareEnvforPostCGI();
+      else if (_method == "DELETE")
+        prepareDeleteRequest();
+      else
+      {
+        if (_requestIsACGI)
+          return (prepareEnvForGetCGI());
+        readFILE();
+      }
+    }
+    catch (Exception& e)
+    {
+      LOG_WARNING << e.what();
+      handleError(e.errnum());
     }
   }
   return 0;

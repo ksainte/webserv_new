@@ -31,5 +31,8 @@ class ErrorMessages {
 		static const char* E_HEADERS_TOO_LONG;
 		static const char* E_MAX_BODY_SIZE;
 		static const char* E_FORK_FAILED;
+		static const char* E_BAD_REQUEST;
+		static const char* E_FORBIDDEN;
+		static const char* E_DELETE_FAIL;
 };
 #endif
