@@ -95,7 +95,12 @@ void Connection::_checkBodySize() const
   const ConfigType::DirectiveValue* val =
     _searcher->findLocationDirective(_sockFd, "client_max_body_size", _host, _path);
 
-  if (val && bodySize((*val)[0]) < requestBodySize)
+  ssize_t maxBodySize = _defaultMaxBodySize;
+
+  if (val && bodySize((*val)[0]) != -1)
+    maxBodySize = bodySize((*val)[0]);
+
+  if (requestBodySize > maxBodySize)
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
