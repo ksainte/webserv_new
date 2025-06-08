@@ -24,6 +24,9 @@ const char* ErrorMessages::E_BAD_ROUTE =
 const char* ErrorMessages::E_BAD_PATH =
   "invalid path";
 
+const char* ErrorMessages::E_TIMEOUT =
+  "connection timed out";
+
 const char* ErrorMessages::E_ARGV =
   "webserv: usage: ./webserv <file>";
 

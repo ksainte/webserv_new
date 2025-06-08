@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include <cstring>
 #include <unistd.h>
 #include <cstdlib>
@@ -20,10 +21,12 @@ Connection::Connection():
   location(),
   _continueReadingFile(),
   _areHeadersSent(),
-  _buffer()
+  _buffer(),
+  _requestStarted(false)
 {
   // Clear the buffer//
   memset(_buffer, 0, sizeof(_buffer));
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Connection created\n";
 }
 
@@ -34,9 +37,11 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   location(),
   _continueReadingFile(),
   _areHeadersSent(),
-  _buffer()
+  _buffer(),
+  _requestStarted(false)
 {
   memset(_buffer, 0, sizeof(_buffer));
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Connection created\n";
 }
 
@@ -48,8 +53,10 @@ Connection::Connection(const Connection& other):
   location(),
   _continueReadingFile(),
   _areHeadersSent(),
-  _buffer()
+  _buffer(),
+  _requestStarted(false)
 {
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Connection copied\n";
 }
 
@@ -156,31 +163,58 @@ std::string Connection::getContentType()
     return "text/plain";
 }
 
-void Connection::sendToGetCGI()
+void Connection::sendToCGI()
 {
-  int pid;
+  int cgi_pid;
   char* arr[2];
 
-  pid = fork();
+  signal(SIGPIPE, SIG_IGN);
+
+  // Fork the CGI process
+  cgi_pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
-  if (pid == 0)
+  
+  if (cgi_pid == 0)
   {
-    close(1);
-    dup2(_clientFd, 1);
+    if (_method == "POST")
+      dup2(_clientFd, STDIN_FILENO);
+    
+    // Always redirect stdout to client for both GET and POST
+    dup2(_clientFd, STDOUT_FILENO);
+    
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
-    exit(1); //faut le changer?
+    exit(1);
   }
-  else if (pid < 0)
+  if (cgi_pid < 0)
   {
-    close(_clientFd);
-    _manager->unregisterEvent(_clientFd);
-    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
   }
-  wait(NULL);
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
+  
+  // Parent process: wait with timeout using polling approach
+  int status;
+
+  for (int i = 0; i < _defaultCgiTimeout; ++i)
+  {
+    pid_t result = waitpid(cgi_pid, &status, WNOHANG);
+    
+    if (result == cgi_pid)
+    {
+      signal(SIGPIPE, SIG_DFL);
+      return ;
+    }
+      sleep(1);
+  }
+
+  // Timeout reached - kill the child process
+  kill(cgi_pid, SIGKILL);
+
+  // Wait for child to die
+  wait(&status);
+
+  signal(SIGPIPE, SIG_DFL);
+  throw Exception(ErrorMessages::E_TIMEOUT, 408);
 }
 
 void Connection::createMinGetEnv()
@@ -208,7 +242,15 @@ int Connection::prepareEnvForGetCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  sendToGetCGI();
+  sendToCGI();
+  
+  // After CGI completes successfully, close the connection
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  
+  // Reset timeout when CGI completes successfully
+  resetTimeout();
+  
   return (0);
 }
 
@@ -232,6 +274,9 @@ void Connection::_isMethodAllowed() const
 
 void Connection::prepareResponse(const Event* p)
 {
+  // Start the request timeout timer
+  _startRequestTimer();
+  
   try
   {
     extractHeaders();
@@ -248,33 +293,6 @@ void Connection::prepareResponse(const Event* p)
     handleError(e.errnum());
   }
   _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
-}
-
-void Connection::sendToPostCGI()
-{
-  int pid;
-
-  pid = fork();
-  char *arr[2];
-  arr[0] = const_cast<char*>(cgiPath.c_str());
-  arr[1] = NULL;
-  if (pid == 0)
-  {
-    dup2(_clientFd, STDIN_FILENO);
-    dup2(_clientFd, STDOUT_FILENO);
-    execve(cgiPath.c_str(), arr, env.data());
-    perror("execve: ");
-    exit(1);
-  }
-  else if (pid < 0)
-  {
-    close(_clientFd);
-    _manager->unregisterEvent(_clientFd);
-    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
-  }
-  wait(NULL);
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
 }
 
 void Connection::createMinPostEnv()
@@ -295,7 +313,13 @@ void Connection::prepareEnvforPostCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  sendToPostCGI();
+  sendToCGI();
+
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  
+  // Reset timeout when CGI completes successfully
+  resetTimeout();
 }
 
 void Connection::isFileToDeleteValid(int *result)
@@ -360,6 +384,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
+    resetTimeout(); // Reset timeout when connection closes
     return false;
   }
   if (!_listDir.empty())
@@ -367,6 +392,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
+    resetTimeout(); // Reset timeout when connection closes
     return false;
   }
   return true;
@@ -374,6 +400,13 @@ bool Connection::isNotEmpty(const Event* p)
 
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
+
+  if (_isRequestTimedOut())
+  {
+    _handleRequestTimeout();
+    return 1; // Signal to epoll to close this connection
+  }
+
   if (flags & EPOLLIN)
   {
     prepareResponse(p);
@@ -498,6 +531,13 @@ void Connection::sendResponseHeaders()
 
 int Connection::readFILE()
 {
+  // Check for timeout during file operations
+  if (_isRequestTimedOut())
+  {
+    _handleRequestTimeout();
+    return 1;
+  } // Reset timeout when connection closes
+
   if (_areHeadersSent == false)
   {
     sendResponseHeaders();
@@ -516,6 +556,10 @@ int Connection::readFILE()
   close(_clientFd);
   _areHeadersSent = false;
   memset(_buffer, 0, sizeof(_buffer));
+  
+  // Reset timeout when request completes successfully
+  resetTimeout();
+  
   std::clog << "\nEnd of file!!\n";
   return 0;
 }
@@ -650,3 +694,77 @@ Event* Connection::getEvent() { return &_event; }
 int Connection::getSockFd() const { return _sockFd; }
 Epoll* Connection::getManager() const { return _manager; }
 Searcher* Connection::getSearcher() const { return _searcher; }
+
+// Timeout implementation methods
+void Connection::_startRequestTimer()
+{
+  if (!_requestStarted)
+  {
+    gettimeofday(&_requestStartTime, NULL);
+    _requestStarted = true;
+    LOG_DEBUG << "Request timer started for fd " << _clientFd << "\n";
+  }
+}
+
+bool Connection::_isRequestTimedOut() const
+{
+  if (!_requestStarted)
+    return false;
+
+  struct timeval currentTime;
+  gettimeofday(&currentTime, NULL);
+  
+  double elapsed = (currentTime.tv_sec - _requestStartTime.tv_sec) + 
+                   (currentTime.tv_usec - _requestStartTime.tv_usec) / 1000000.0;
+  
+  // Use CGI timeout for CGI requests, regular timeout for others
+  double timeoutLimit = _requestIsACGI ? _defaultCgiTimeout : _defaultRequestTimeout;
+  
+  return elapsed > timeoutLimit;
+}
+
+double Connection::_getElapsedTime() const
+{
+  if (!_requestStarted)
+    return 0.0;
+
+  struct timeval currentTime;
+  gettimeofday(&currentTime, NULL);
+  
+  return (currentTime.tv_sec - _requestStartTime.tv_sec) + 
+         (currentTime.tv_usec - _requestStartTime.tv_usec) / 1000000.0;
+}
+
+void Connection::_handleRequestTimeout()
+{
+  LOG_WARNING << "Request timeout after " << _getElapsedTime() << " seconds for fd " << _clientFd << "\n";
+  
+  // Send 408 Request Timeout response
+  handleError(408);
+  
+  // If there's an error response, send it
+  if (!_ErrResponse.empty())
+  {
+    send(_clientFd, _ErrResponse.c_str(), _ErrResponse.size(), 0);
+  }
+  
+  // Clean up the connection
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  
+  // Reset timeout state
+  _requestStarted = false;
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
+}
+
+bool Connection::isTimedOut() const
+{
+  return _isRequestTimedOut();
+}
+
+void Connection::resetTimeout()
+{
+  _requestStarted = false;
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
+  LOG_DEBUG << "Request timer reset for fd " << _clientFd << "\n";
+}

@@ -11,6 +11,7 @@ class ErrorMessages {
 		static const char* E_ARGV;
 		static const char* E_BAD_TYPE;
 		static const char* E_BAD_ROUTE;
+		static const char* E_TIMEOUT;
 		static const char* E_BAD_PATH;
 		static const char* E_BAD_METHOD;
 		static const char* E_HTTP_VERSION;
