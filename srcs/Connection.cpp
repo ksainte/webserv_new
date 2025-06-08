@@ -155,7 +155,7 @@ std::string Connection::getContentType()
     return "text/plain";
 }
 
-void Connection::sendToGetCGI()
+void Connection::sendToCGI()
 {
   int pid;
   char* arr[2];
@@ -163,13 +163,19 @@ void Connection::sendToGetCGI()
   pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
+  
   if (pid == 0)
   {
-    close(1);
-    dup2(_clientFd, 1);
+    // For POST requests, redirect stdin from client
+    if (_method == "POST")
+      dup2(_clientFd, STDIN_FILENO);
+    
+    // Always redirect stdout to client for both GET and POST
+    dup2(_clientFd, STDOUT_FILENO);
+    
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
-    exit(1); //faut le changer?
+    exit(1);
   }
   else if (pid < 0)
   {
@@ -177,6 +183,7 @@ void Connection::sendToGetCGI()
     _manager->unregisterEvent(_clientFd);
     throw Exception(ErrorMessages::E_FORK_FAILED, 500);
   }
+  
   wait(NULL);
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
@@ -207,7 +214,7 @@ int Connection::prepareEnvForGetCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  sendToGetCGI();
+  sendToCGI();
   return (0);
 }
 
@@ -252,36 +259,6 @@ void Connection::prepareResponse(const Event* p)
   _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
 }
 
-void Connection::sendToPostCGI()
-{
-  int pid;
-
-  pid = fork();
-  char *arr[2];
-  arr[0] = const_cast<char*>(cgiPath.c_str());
-  arr[1] = NULL;
-  if (pid == 0)
-  {
-	if (_method == "GET")
-		close(1);
-	if (_method == "POST")
-    	dup2(_clientFd, STDIN_FILENO);
-    dup2(_clientFd, STDOUT_FILENO);
-    execve(cgiPath.c_str(), arr, env.data());
-    perror("execve: ");
-    exit(1);
-  }
-  else if (pid < 0)
-  {
-    close(_clientFd);
-    _manager->unregisterEvent(_clientFd);
-    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
-  }
-  wait(NULL);
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
-}
-
 void Connection::createMinPostEnv()
 {
   envStorage.clear();
@@ -300,7 +277,7 @@ void Connection::prepareEnvforPostCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  sendToPostCGI();
+  sendToCGI();
 }
 
 void Connection::prepareDeleteRequest(const Event* p)

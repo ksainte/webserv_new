@@ -45,8 +45,7 @@ class Connection : public virtual IEventHandler, public Request
   void prepareDeleteRequest(const Event* p);
   bool isNotEmpty(const Event* p);
   const LocationBlock* location;
-  void sendToGetCGI();
-  void sendToPostCGI();
+  void sendToCGI();
   bool _continueReadingFile;
   bool _requestIsACGI;
   bool _areHeadersSent;
