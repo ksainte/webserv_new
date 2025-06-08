@@ -175,7 +175,7 @@ void Connection::sendToGetCGI()
   {
     close(_clientFd);
     _manager->unregisterEvent(_clientFd);
-    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
   }
   wait(NULL);
   _manager->unregisterEvent(_clientFd);
@@ -262,7 +262,10 @@ void Connection::sendToPostCGI()
   arr[1] = NULL;
   if (pid == 0)
   {
-    dup2(_clientFd, STDIN_FILENO);
+	if (_method == "GET")
+		close(1);
+	if (_method == "POST")
+    	dup2(_clientFd, STDIN_FILENO);
     dup2(_clientFd, STDOUT_FILENO);
     execve(cgiPath.c_str(), arr, env.data());
     perror("execve: ");
@@ -272,7 +275,7 @@ void Connection::sendToPostCGI()
   {
     close(_clientFd);
     _manager->unregisterEvent(_clientFd);
-    throw Exception(ErrorMessages::E_FORK_FAILED, 404);
+    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
   }
   wait(NULL);
   _manager->unregisterEvent(_clientFd);

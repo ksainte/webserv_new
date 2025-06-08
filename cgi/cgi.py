@@ -42,8 +42,9 @@ def process_multipart_form_data(environ, input_stream):
                         file_content = data_part.strip(b'\r\n--')
                         try:
                             sanitized_filename = os.path.basename(filename)
-                            upload_dir = "uploads"
-                            os.makedirs(upload_dir, exist_ok=True)  # Ensure the uploads directory exists
+                            # Get upload directory from environment variable or use current working directory as default
+                            upload_dir = os.environ.get('UPLOAD_DIR', os.getcwd())
+                            os.makedirs(upload_dir, exist_ok=True)  # Ensure the upload directory exists
                             filepath = os.path.join(upload_dir, f"{sanitized_filename}")
                             with open(filepath, 'wb') as f:
                                 f.write(file_content)
