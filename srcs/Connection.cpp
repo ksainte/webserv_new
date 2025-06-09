@@ -168,8 +168,6 @@ void Connection::sendToCGI()
   char* arr[2];
 
   signal(SIGPIPE, SIG_IGN);
-
-  // Fork the CGI process
   cgi_pid = fork();
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
@@ -188,7 +186,6 @@ void Connection::sendToCGI()
     throw Exception(ErrorMessages::E_FORK_FAILED, 500);
   }
   
-  // Parent process: wait with timeout using polling approach
   int status;
 
   for (int i = 0; i < _defaultCgiTimeout; ++i)
@@ -239,14 +236,9 @@ int Connection::prepareEnvForGetCGI()
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
   sendToCGI();
-  
-  // After CGI completes successfully, close the connection
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
-  
-  // Reset timeout when CGI completes successfully
   resetTimeout();
-  
   return (0);
 }
 
@@ -305,8 +297,14 @@ void Connection::prepareEnvforPostCGI()
   if (!_requestIsACGI)
   {
     std::ostringstream oss;
-    oss << "HTTP/1.1 200 OK\r\n"
-        << "\r\n";   
+    oss << "HTTP/1.1 204 No Content\r\n"
+        << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+        << "\r\n";
+    // oss << "HTTP/1.1 200 OK\r\n"
+    // << "Content-Type: text/html; charset=UTF-8\r\n"
+    // << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+    // << "Content-Length: 0\r\n"
+    // << "\r\n";
     send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
     _manager->unregisterEvent(_clientFd);
     close(_clientFd);
@@ -321,11 +319,8 @@ void Connection::prepareEnvforPostCGI()
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
   sendToCGI();
-
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
-  
-  // Reset timeout when CGI completes successfully
   resetTimeout();
 }
 
@@ -333,6 +328,7 @@ void Connection::isFileToDeleteValid(int *result)
 {
   const std::string prefix(location->getPrefix());
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
+
   if (!p || p[0].empty())
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
   struct stat stats = {};
@@ -340,7 +336,6 @@ void Connection::isFileToDeleteValid(int *result)
   _rootPath.append("/");
   _rootPath.append(_path);
   stat(_rootPath.c_str(), &stats);
-
   if (!access(_rootPath.c_str(), W_OK))
   {
     if (!S_ISDIR(stats.st_mode))
@@ -367,7 +362,6 @@ void Connection::prepareDeleteRequest()
     "<h1>File deleted.</h1>"
     "</body>"
     "</html>";
-  
   std::ostringstream oss;
   oss << "HTTP/1.1 200 OK\r\n"
       << "Content-Type: text/html; charset=UTF-8\r\n"
@@ -375,7 +369,6 @@ void Connection::prepareDeleteRequest()
       << "Content-Length: " << body.size() << "\r\n"
       << "\r\n"
       << body;
-  
   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
   }
   else
