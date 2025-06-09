@@ -45,6 +45,7 @@ class Connection : public virtual IEventHandler, public Request
   std::string getContentType();
   std::vector<std::string> envStorage;
   std::vector<char*> env;
+  void discardDupEnvVar();
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
   void prepareEnvforPostCGI();

@@ -236,6 +236,7 @@ int Connection::prepareEnvForGetCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
+  discardDupEnvVar();
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
@@ -293,19 +294,29 @@ void Connection::createMinPostEnv()
   envStorage.push_back("CONTENT_LENGTH=" + _headers["content-length"]);
 }
 
+void Connection::discardDupEnvVar()
+{
+  std::clog << "test" << "\n";
+  int i;
+  std::vector<char*> str;
+  i = 0;
+  while (env[i])
+  {
+    std::size_t found = envStorage[i].find("=");
+    std::string sub = envStorage[i].substr(0, found);
+    std::clog << sub << "\n";
+    i++;
+  }
+}
+
 void Connection::prepareEnvforPostCGI()
 {
+  std::ostringstream oss;
   if (!_requestIsACGI)
   {
-    std::ostringstream oss;
     oss << "HTTP/1.1 204 No Content\r\n"
         << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
         << "\r\n";
-    // oss << "HTTP/1.1 200 OK\r\n"
-    // << "Content-Type: text/html; charset=UTF-8\r\n"
-    // << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-    // << "Content-Length: 0\r\n"
-    // << "\r\n";
     send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
     _manager->unregisterEvent(_clientFd);
     close(_clientFd);
@@ -319,6 +330,7 @@ void Connection::prepareEnvforPostCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
+  // discardDupEnvVar();
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
@@ -769,3 +781,9 @@ void Connection::resetTimeout()
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Request timer reset for fd " << _clientFd << "\n";
 }
+
+    // oss << "HTTP/1.1 200 OK\r\n"
+    // << "Content-Type: text/html; charset=UTF-8\r\n"
+    // << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+    // << "Content-Length: 0\r\n"
+    // << "\r\n";
