@@ -42,8 +42,13 @@ int Tokenizer::printError(int err)
         std::cerr << "\nSyntax Error: There is a doublure in the type of methods!\n";
     if (err == CONFIG_EMPTY)
         std::cerr << "\nError: Config File is empty!\n";
+    if (err == ONLY_ONE_OR_TWO)
+        std::cerr << "\nSyntax Error: The return Directive can only hold ONE OR TWO STRING!\n";
+    if (err == NUM_NOT_ALLOWED)
+        std::cerr << "\nSyntax Error: The return Directive accepts numbers between 199 and 299!\n";
     return (0);
 }
+
 
 std::string	ft_get_value(std::string s1)
 {
@@ -208,6 +213,7 @@ int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, s
 {
     const std::string one_string[7] = {"listen", "host", "port", "client_max_body_size", "root", "autoindex", "cgi_pass"};
     const std::string two_strings[1] = {"cgi_params"};
+    const std::string one_or_two_strings[1] = {"return"};
     const std::string valid_methods[3] = {"GET", "POST", "DELETE"};
     int i;
     int string_number;
@@ -257,6 +263,36 @@ int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, s
             }
             if (string_number != 2)
                 return (printError(ONLY_TWO));
+            return (1);
+        }
+        i++;
+    }
+    i = 0;
+    while (i < 1)
+    {
+        if (t1_value == one_or_two_strings[i])
+        {
+            while ((*it).type != Token::SEMICOLON)
+            {
+                if ((*it).type == Token::STRING)
+                {
+                    string_number++;
+                    if (string_number == 1)
+                    {
+                        int num;
+                        std::stringstream ss;
+                        ss << (*it).value;
+                        ss >> num;
+                        if (num < 199 || num > 299)
+                            return (printError(NUM_NOT_ALLOWED));
+                    }
+                }
+                else
+                    return (printError(NOT_STRING));//what is between directive and semicolon is not a string
+                it++;
+            }
+            if (string_number == 0 || string_number > 2)
+                return (printError(ONLY_ONE_OR_TWO));
             return (1);
         }
         i++;

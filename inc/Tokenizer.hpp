@@ -21,6 +21,8 @@
 #define INVALID_METHOD 16
 #define DBL_METHOD 17
 #define CONFIG_EMPTY 18
+#define ONLY_ONE_OR_TWO 19
+#define NUM_NOT_ALLOWED 20
 
 
 // typedef enum s_token_type
