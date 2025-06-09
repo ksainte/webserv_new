@@ -62,9 +62,16 @@ class Connection : public virtual IEventHandler, public Request
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];
-  
+
+  // Redirection response
+  std::string _redirect;
+
+  // Redirection methods
+  bool  _isRedirect() const;
+  void  _setRedirect();
+
   // Timeout tracking
-  struct timeval _requestStartTime;
+  timeval _requestStartTime;
   bool _requestStarted;
   
   // Timeout helper methods
@@ -73,10 +80,18 @@ class Connection : public virtual IEventHandler, public Request
   double _getElapsedTime() const;
   void _handleRequestTimeout();
 
-  static const std::string& getErrorMessage(int errnum);
+  // Getter for status code + message
+  static const std::string& _getErrorMessage(long errnum);
+  static const std::string* _getRedirectMessage(long statusCode);
 
-  static std::map<int, std::string> create_status_map() {
-    std::map<int, std::string> m;
+  static std::map<long, std::string> create_status_map() {
+    std::map<long, std::string> m;
+    m[301] = "301 Moved Permanently";
+    m[302] = "302 Found";
+    m[303] = "303 See Other";
+    m[304] = "304 Not Modified";
+    m[307] = "307 Temporary Redirect";
+    m[308] = "308 Permanent Redirect";
     m[400] = "400 Bad Request";
     m[401] = "401 Unauthorized";
     m[403] = "403 Forbidden";
