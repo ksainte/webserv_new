@@ -9,6 +9,11 @@ class ServerBlock;
 
 class ConfigType {
 	public:
+
+		typedef std::map<long, std::string> HttpStatusCode;
+
+		typedef std::map<long, std::string>::const_iterator HttpStatusCodeIt;
+
 		typedef std::vector<std::string> 					Result;
 
 		typedef std::list<std::pair<std::string, std::string> > CgiParams;

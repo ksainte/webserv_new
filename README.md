@@ -21,45 +21,48 @@ post    send a 200 Ok response even when there is no cgi
 
 execve send response when cgi file not found 
 
-# Eval 
+# Redirection
 
-## Config File
+This directive told the server to send a HTTP redirect response containing
+a given status code and a url.
 
+Syntax
 
-# webserv_new
+return <status code> <url>;
 
-# CGI
+ex : 
 
-exemple de configuration 
+return 301 example.com;
 
-location /upload {
-    root /usr/documents
-    cgi_pass /upload.py;
-    cgi_params CONTENT_LENGTH 120;
-    cgi_params CONTENT_TYPE multipart/formdata;
-    cgi_params FILENAME file;
-    cgi_params FILENAME file2; => doit remplacer ou discard
-}
+# Parsing
 
-Verifier le chemin d'acces au script => root + / + cgi_pass
+Must contain 2 arguments 
 
-check avec stat() et IS_DIR() -> si c'est un repertoire, retourne error
-check avec access() l'existence et l'executable (FLAG X_OK)
+Can be present in server block and/or location block
 
-si il existe, 
-Recuperer les variables d'environnment => location->getCgiParams();
+return => status code => url => semicolon
 
-Creer l'environnement
+Must check the status code validity: 299 < status code <= 399
 
-iterer a travers la liste -> it->first = nom de la variable et it->second = valeur de la variable
+# Config file loading
 
-creer la variable -> it->first + "=" + it->second
+This directive will be stored inside the location directive map
+When calling its getter function, the return value will be a vector
+of string containing two value: the status code and the url;
 
-verifier qu'il n'y a pas de doublons
+# Execution
 
-executer le script
+The return directive takes precedence over all other directive,
+meaning the first instruction during response generation must be 
+to check if the return directive is present for the given location;
 
-appeler execv(root + / +cgi_pass, argv[], env[]);
+If It's present, the server must generate an appropriate response containing
+the status code and :
+
+-   in case of a redirection, the header Location must be set with the correct url
+
+The server must then send this response to the client and close the connection.
+    
 
 
 

@@ -82,7 +82,6 @@ Connection::~Connection()
   }
   catch (...)
   {
-    // Ignore exceptions during destruction
   }
 
   LOG_DEBUG << "Connection destroyed\n";
@@ -272,6 +271,14 @@ void Connection::prepareResponse(const Event* p)
     extractHeaders();
     storeHeaders();
     _isMethodAllowed();
+
+    if (_isRedirect())
+    {
+      _setRedirect();
+      _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
+      return;
+    }
+
     if (_method == "GET")
       _isPathValid();
     _checkBodySize();
@@ -392,12 +399,20 @@ void Connection::prepareDeleteRequest()
 
 bool Connection::isNotEmpty(const Event* p)
 {
+  if (!_redirect.empty())
+  {
+    send(p->getFd(), _redirect.c_str(), _redirect.size(), 0);
+    _manager->unregisterEvent(p->getFd());
+    close(p->getFd());
+    resetTimeout();
+    return false;
+  }
   if (!_ErrResponse.empty())
   {
     send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
-    resetTimeout(); // Reset timeout when connection closes
+    resetTimeout();
     return false;
   }
   if (!_listDir.empty())
@@ -405,7 +420,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
-    resetTimeout(); // Reset timeout when connection closes
+    resetTimeout();
     return false;
   }
   return true;
@@ -584,13 +599,13 @@ void Connection::_isHttpVersionSupported(const std::string& version)
   throw Exception(ErrorMessages::E_HTTP_VERSION, 400);
 }
 
-const std::string& Connection::getErrorMessage(const int errnum)
+const std::string& Connection::_getErrorMessage(const long errnum)
 {
-  static const std::map<int, std::string> http_status_codes = create_status_map();
+  static const ConfigType::HttpStatusCode status = create_status_map();
   static const std::string unknown_error_str = "Unknown Error";
 
-  std::map<int, std::string>::const_iterator it = http_status_codes.find(errnum);
-  if (it != http_status_codes.end())
+  ConfigType::HttpStatusCodeIt it = status.find(errnum);
+  if (it != status.end())
   {
     return it->second;
   }
@@ -600,7 +615,7 @@ const std::string& Connection::getErrorMessage(const int errnum)
 
 void Connection::_defaultErrorPage(const int errnum)
 {
-  std::string errval = getErrorMessage(errnum);
+  std::string errval = _getErrorMessage(errnum);
 
   const std::string body =
     "<!DOCTYPE html>\n"
@@ -741,7 +756,7 @@ double Connection::_getElapsedTime() const
   if (!_requestStarted)
     return 0.0;
 
-  struct timeval currentTime;
+  timeval currentTime;
   gettimeofday(&currentTime, NULL);
   
   return (currentTime.tv_sec - _requestStartTime.tv_sec) + 
@@ -768,6 +783,48 @@ void Connection::_handleRequestTimeout()
   // Reset timeout state
   _requestStarted = false;
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
+}
+
+bool Connection::_isRedirect() const
+{
+  return _searcher->findLocationDirective(_sockFd, "return", _host, _path) != NULL;
+}
+
+const std::string* Connection::_getRedirectMessage(const long code)
+{
+  static const ConfigType::HttpStatusCode status = create_status_map();
+
+  ConfigType::HttpStatusCodeIt it = status.find(code);
+
+  if (it != status.end())
+  {
+    return &it->second;
+  }
+
+  return NULL;
+}
+
+void Connection::_setRedirect()
+{
+  const ConfigType::DirectiveValue* redirect =
+    _searcher->findLocationDirective(_sockFd, "return", _host, _path);
+
+  const long statusCode = std::strtol((*redirect)[0].c_str(), NULL, 10);
+
+  const std::string* redirectMessage =
+    _getRedirectMessage(statusCode);
+
+  std::stringstream ss;
+  ss << "HTTP/1.1 ";
+
+  redirectMessage ?
+  ss << *redirectMessage : ss << statusCode;
+
+  ss << "\r\n";
+  ss << "Location: " << (*redirect)[1] << "\r\n";
+  ss << "\r\n";
+
+  _redirect = ss.str();
 }
 
 bool Connection::isTimedOut() const
