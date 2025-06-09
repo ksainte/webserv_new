@@ -38,6 +38,8 @@ return 301 example.com;
 
 Must contain 2 arguments 
 
+Can be present in server block and/or location block
+
 return => status code => url => semicolon
 
 Must check the status code validity: 299 < status code <= 399
