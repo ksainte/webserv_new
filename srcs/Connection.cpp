@@ -232,10 +232,10 @@ int Connection::prepareEnvForGetCGI()
   const ConfigType::CgiParams& p = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
+  discardDupEnvVar();
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  discardDupEnvVar();
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
@@ -303,15 +303,26 @@ void Connection::createMinPostEnv()
 
 void Connection::discardDupEnvVar()
 {
-  std::clog << "test" << "\n";
-  int i;
-  std::vector<char*> str;
+  std::size_t i;
+  std::size_t j;
   i = 0;
-  while (env[i])
+  j = 0;
+  while (i < envStorage.size())
   {
     std::size_t found = envStorage[i].find("=");
     std::string sub = envStorage[i].substr(0, found);
-    std::clog << sub << "\n";
+    j = i;
+    while (j + 1 < envStorage.size())
+    {
+      std::size_t found = envStorage[j + 1].find("=");
+      std::string sub_next = envStorage[j + 1].substr(0, found);
+      if (sub.compare(sub_next) == 0)
+      {
+        envStorage.erase(envStorage.begin() + j + 1);
+        j--;
+      }
+      j++;
+    }
     i++;
   }
 }
@@ -334,10 +345,10 @@ void Connection::prepareEnvforPostCGI()
   const ConfigType::CgiParams& params = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = params.begin(); it != params.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
+  discardDupEnvVar();
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  // discardDupEnvVar();
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
