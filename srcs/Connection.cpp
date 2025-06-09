@@ -82,7 +82,6 @@ Connection::~Connection()
   }
   catch (...)
   {
-    // Ignore exceptions during destruction
   }
 
   LOG_DEBUG << "Connection destroyed\n";
