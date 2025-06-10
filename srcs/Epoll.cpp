@@ -67,7 +67,7 @@ void	Epoll::wait()
 	
 		if (numEvent == -1)
 		{
-			LOG_CRITICAL << ErrorMessages::E_EPOLL_WAIT << ": " << strerror(errno);
+ 			LOG_CRITICAL << ErrorMessages::E_EPOLL_WAIT << ": " << strerror(errno);
 			throw std::runtime_error(ErrorMessages::E_EPOLL_WAIT);
 		}
 	

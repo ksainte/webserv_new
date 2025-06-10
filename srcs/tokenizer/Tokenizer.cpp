@@ -235,9 +235,9 @@ int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, s
                 if ((*it).type == Token::STRING)
                 {
                     string_number++;
-                }//pas oublier que avec ca server et location passe pas!
-                else//is not a string! par exemple location ou server ou autre
-                    return (printError(NOT_STRING));//what is between directive and semicolon is not a string
+                }
+                else
+                    return (printError(NOT_STRING));
                 it++;
             }
             if (string_number != 1)
@@ -258,7 +258,7 @@ int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, s
                     string_number++;
                 }
                 else
-                    return (printError(NOT_STRING));//what is between directive and semicolon is not a string
+                    return (printError(NOT_STRING));
                 it++;
             }
             if (string_number != 2)
@@ -283,7 +283,7 @@ int Tokenizer::ft_valid_values_after_directive(std::list<Token>::iterator &it, s
                         std::stringstream ss;
                         ss << (*it).value;
                         ss >> num;
-                        if (num < 199 || num > 299)
+                        if (num < 299 || num > 399)
                             return (printError(NUM_NOT_ALLOWED));
                     }
                 }

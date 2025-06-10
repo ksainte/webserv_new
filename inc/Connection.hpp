@@ -36,6 +36,7 @@ class Connection : public virtual IEventHandler, public Request
   Searcher* _searcher;
   int _sockFd;
   Event _event;
+  std::string _tmpPathExt;
   std::string _rootPath;
   std::string _ErrResponse;
   std::string _listDir;
@@ -55,11 +56,13 @@ class Connection : public virtual IEventHandler, public Request
   void sendToCGI();
   bool _continueReadingFile;
   bool _requestIsACGI;
+  bool _isExtensionSet;
   bool _areHeadersSent;
   void sendResponseHeaders();
   void createMinGetEnv();
   void createMinPostEnv();
   void isFileToDeleteValid(int *result);
+  void findPathFinalExtension();
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];

@@ -140,6 +140,16 @@ void Connection::isRequestaCGI()
   throw Exception(ErrorMessages::E_FORBIDDEN, 403);
 }
 
+// if (access(cgiPath.c_str(), X_OK) == -1)
+// throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+// if (S_ISDIR(stats.st_mode))
+// throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+
+// std::size_t found = (*p)[0].find(".");
+// std::string str = (*p)[0].substr(found + 1);
+// if (str.compare(_tmpPathExt) == 0)
+// _requestIsACGI = true;
+
 std::string Connection::getContentType()
 {
   std::size_t found = absPath.find(".");
@@ -265,20 +275,17 @@ void Connection::prepareResponse(const Event* p)
 {
   // Start the request timeout timer
   _startRequestTimer();
-  
   try
   {
     extractHeaders();
     storeHeaders();
     _isMethodAllowed();
-
     if (_isRedirect())
     {
       _setRedirect();
       _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
       return;
     }
-
     if (_method == "GET")
       _isPathValid();
     _checkBodySize();
@@ -445,7 +452,6 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     _handleRequestTimeout();
     return 1; // Signal to epoll to close this connection
   }
-
   if (flags & EPOLLIN)
   {
     prepareResponse(p);
@@ -498,15 +504,48 @@ bool Connection::_checkDefaultFileAccess(const std::string& prefix)
   return false;
 }
 
+void Connection::findPathFinalExtension()
+{
+  std::size_t i;
+  const std::string validExtension[] = {"cgi", "py", "php"}; 
+  std::size_t found;
+  _tmpPathExt = _path;
+  found = _tmpPathExt.find(".");
+  if (found == std::string::npos)
+    return ;
+  while (found !=std::string::npos)
+  {
+    _tmpPathExt = _tmpPathExt.substr(found + 1);
+    found = _tmpPathExt.find(".");
+  }
+  if (_tmpPathExt.length() == 0)
+  {
+    std::clog << "\nNo Extension found after last dot(.)!\n";  
+    return ;
+  }
+  // std::clog << "\ntmp is " << _tmpPathExt << "\n";
+  _isExtensionSet = true;
+  found = _path.find(_tmpPathExt);
+  i = 0;
+  while(i < validExtension->length())
+  {
+    if (_tmpPathExt.compare(validExtension[i]) == 0)
+      _path.resize(found - 1);
+    i++;
+  }
+  std::clog << "\npath is " << _path << "\n";
+}
+
+
 void Connection::_isPathValid()
 {
+  // findPathFinalExtension();
   location = _searcher->getLocation(_sockFd, _host, _path);
-
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
 
   const std::string prefix(location->getPrefix());
-
+  // std::clog << prefix;
   const ConfigType::DirectiveValue* root =
     _searcher->findLocationDirective(_sockFd, "root", _host, prefix);
 
