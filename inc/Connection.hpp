@@ -47,6 +47,7 @@ class Connection : public virtual IEventHandler, public Request
   std::vector<std::string> envStorage;
   std::vector<char*> env;
   void discardDupEnvVar();
+  void handleChunkedRequest();
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
   void prepareEnvforPostCGI();
@@ -66,7 +67,11 @@ class Connection : public virtual IEventHandler, public Request
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];
-
+  // std::string 				_tempBuff;
+  std::vector<unsigned char> _tempBuff;
+  std::string str;
+  int  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
+  size_t totalReadBytes;
   // Redirection response
   std::string _redirect;
 

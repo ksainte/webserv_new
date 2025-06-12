@@ -334,6 +334,78 @@ void Connection::discardDupEnvVar()
   }
 }
 
+int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
+{
+	std::cout << "CHUNK START\n";
+
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
+
+  if (it == _tempBuff.end())
+  {
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+  }
+
+  size_t chunkSizeEnd = it - _tempBuff.begin();
+
+  std::string chunk_size_str(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
+  
+  std::stringstream ss(chunk_size_str);
+
+  size_t chunkSize;
+
+  ss >> std::hex >> chunkSize;
+
+  if (ss.fail() || chunk_size_str.empty())
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+
+  if (chunkSize == 0)
+    return (0);
+
+  size_t chunkDataStart = chunkSizeEnd + _headerEnd.size(); // you end up on the data
+  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of chunk
+
+		// Check incomplete chunk data
+  if (bytesRead < chunkDataEnd)
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+
+  size_t ChunkDataSize = chunkDataEnd - _headerEnd.size() - chunkDataStart;
+    
+  int rB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), ChunkDataSize, file_ptr);
+
+  std::clog << "rB is " << rB << "\n";
+
+  totalReadBytes += rB;
+
+  std::cout << "CHUNK END\n";
+  return (1);
+
+}
+
+
+void Connection::handleChunkedRequest()
+{
+  FILE *file_ptr;
+	int bytesRead;
+
+  _tempBuff.reserve(10000);
+  file_ptr = fopen("test.html", "wb");
+  memset(_tempBuff.data(), 0 , sizeof(_tempBuff));
+
+  while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0))//tu recois plusieurs chunk de style 50kb
+  {
+    std::clog << "bytesRead is \n" << _tempBuff.data() << "\n";
+    std::clog << "str is " << bytesRead << "\n";
+    if (bytesRead == -1)
+      throw std::runtime_error("Error Reading from Client");
+
+    //if faut cleaner la data dans tempbuff avant de la mettre dans file!
+    if(!transfer_encoding_chunked(file_ptr, bytesRead))
+      break;
+    memset(_tempBuff.data(), 0 , sizeof(_tempBuff));
+  }
+  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
+}
+
 void Connection::prepareEnvforPostCGI()
 {
   std::ostringstream oss;
@@ -356,11 +428,21 @@ void Connection::prepareEnvforPostCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  sendToCGI();
+  if (_headers["transfer-encoding"] == "chunked")
+    handleChunkedRequest();
+  else
+    sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   resetTimeout();
 }
+
+// for (std::map < std::string, std::string>::iterator it = _headers.begin(); it != _headers.end();++it)
+// {
+//   std::clog << it->first << "\n";
+//   std::clog << it->second << "\n";
+//   std::clog << "--------------\n";
+// }
 
 void Connection::isFileToDeleteValid(int *result)
 {
