@@ -338,7 +338,7 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 {
 	std::cout << "CHUNK START\n";
 
-  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
 
   if (it == _tempBuff.end())
   {
@@ -372,28 +372,44 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
     
   int rB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), ChunkDataSize, file_ptr);
 
+  // std::clog <<"test is" << _tempBuff.data() + chunkDataEnd;
+
+  const std::vector<unsigned char>::const_iterator it2 = std::search(_tempBuff.begin() + chunkDataEnd, _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
+
+  if (it2 != _tempBuff.end())
+  {
+    std::clog << "last rB is " << rB << "\n";
+    totalReadBytes += rB;
+    std::cout << "CHUNK END\n";
+    return 0;
+  }
   std::clog << "rB is " << rB << "\n";
 
   totalReadBytes += rB;
 
-  std::cout << "CHUNK END\n";
+  std::cout << "NEXT CHUNK\n";
   return (1);
 
 }
 
-
+//implementer le continue reading!
 void Connection::handleChunkedRequest()
 {
   FILE *file_ptr;
 	int bytesRead;
+  int i = 0;
 
-  _tempBuff.reserve(10000);
-  file_ptr = fopen("test.html", "wb");
+  // _tempBuff.reserve(10000);
+  _tempBuff.resize(100000);
+  file_ptr = fopen("testb.html", "wb");
   memset(_tempBuff.data(), 0 , sizeof(_tempBuff));
 
   while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0))//tu recois plusieurs chunk de style 50kb
   {
-    std::clog << "bytesRead is \n" << _tempBuff.data() << "\n";
+    std::clog << "size: " << (int) _tempBuff.size() << '\n';
+    std::clog << "capacity: " << (int) _tempBuff.capacity() << '\n';
+    std::clog << "max_size: " << (int) _tempBuff.max_size() << '\n';
+    std::clog << "bytesRead is \n" << _tempBuff.data();
     std::clog << "str is " << bytesRead << "\n";
     if (bytesRead == -1)
       throw std::runtime_error("Error Reading from Client");
@@ -402,8 +418,11 @@ void Connection::handleChunkedRequest()
     if(!transfer_encoding_chunked(file_ptr, bytesRead))
       break;
     memset(_tempBuff.data(), 0 , sizeof(_tempBuff));
+    i++;
   }
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
+  std::clog << i++;
+  fclose (file_ptr);
 }
 
 void Connection::prepareEnvforPostCGI()

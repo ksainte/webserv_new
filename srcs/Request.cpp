@@ -85,6 +85,13 @@ void Request::extractHeaders()
   _offset = it - _buf.begin() + _headersEnd.size();
   bytesRead = recv(_clientFd, _buf.data(), _offset, 0);
 
+  std::cout << "size: " << (int) _buf.size() << '\n';
+  std::cout << "capacity: " << (int) _buf.capacity() << '\n';
+  std::cout << "max_size: " << (int) _buf.max_size() << '\n';
+  std::clog << "br is " << bytesRead << "\n";
+
+  std::cout << "---------------\n";
+
   if (!bytesRead) return;
 
   if (bytesRead == -1)
