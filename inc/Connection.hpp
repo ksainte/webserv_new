@@ -71,6 +71,7 @@ class Connection : public virtual IEventHandler, public Request
   std::vector<unsigned char> _tempBuff;
   std::string str;
   int  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
+  void fillChunk(size_t _offset, size_t chunkDataStart, FILE *file_ptr);
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;

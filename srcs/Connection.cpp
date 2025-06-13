@@ -334,6 +334,59 @@ void Connection::discardDupEnvVar()
   }
 }
 
+void Connection::fillChunk(size_t offset, size_t chunkDataStart, FILE *file_ptr)
+{
+	std::cout << "TEMP CHUNK\n";
+  //   int z = 0;
+  // while (z < 20)
+  // {
+  //   std::clog << "t is " << _tempBuff[offset + chunkDataStart +  z] << "\n";
+  //   z++;
+  // }
+
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
+
+  if (it == _tempBuff.end())
+  {
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+  }
+
+  size_t chunkSizeEnd = it - (_tempBuff.begin() + chunkDataStart + offset);
+
+  std::string chunk_size_str(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.begin() + chunkDataStart + offset + chunkSizeEnd);
+  
+  std::stringstream ss(chunk_size_str);
+
+  size_t chunkSize;
+
+  ss >> std::hex >> chunkSize;
+
+  std::clog << "\n " << chunkSize << "\n";
+
+  if (ss.fail() || chunk_size_str.empty())
+  throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+
+  if (chunkSize == 0)
+  {
+    std::clog << "chunkSize is 0\n";
+    return ;
+  }
+  chunkDataStart += chunkSizeEnd + _headerEnd.size(); // you end up on the data ie 3 + 2
+  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of single chunk
+
+    int wB;
+    size_t tempOffset;
+    const std::vector<unsigned char>::const_iterator lastRnBeforeRnRn = std::search(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
+    tempOffset = lastRnBeforeRnRn - (_tempBuff.begin() + chunkDataStart + offset);//entre data start et rn
+    wB = fwrite(_tempBuff.data() + chunkDataStart + offset, sizeof(char), tempOffset, file_ptr);
+    offset += tempOffset;//data start + bytes to rn
+    totalReadBytes += wB;
+    offset = offset + _headerEnd.size();//se retrouver sur le prochain chiffre
+    fillChunk(offset, chunkDataStart, file_ptr);
+
+}
+
+
 int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 {
 	std::cout << "CHUNK START\n";
@@ -355,6 +408,9 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 
   ss >> std::hex >> chunkSize;
 
+
+  std::clog << "cs " << chunkSize << "\n";
+  
   if (ss.fail() || chunk_size_str.empty())
     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
 
@@ -367,30 +423,23 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size(); // you end up on the data ie 3 + 2
   size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of single chunk
   //ie this the amount of bytes to read to consider the chunk finished
+
   int wB;
     //check if the current bytestream is already the last chunk, has already the rnrn
   const std::vector<unsigned char>::const_iterator streamEnd = std::search(_tempBuff.begin() + chunkDataStart, _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
   if (streamEnd != _tempBuff.end())//trouve rnrn
   {
+    std::cout << "LAST CHUNK\n";
     const std::vector<unsigned char>::const_iterator lastRnBeforeRnRn = std::search(_tempBuff.begin() + chunkDataStart, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
     _offset = lastRnBeforeRnRn - (_tempBuff.begin() + chunkDataStart);
     wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), _offset, file_ptr);
     totalReadBytes += wB;
-    // _offset = _offset + _headerEnd.size();//t es sur le prochain num
-    // transfer_encoding_chunked(file_ptr, bytesRead, _offset);
-    // _offset = _offset + _headerEnd.size();//t es sur le prochain num
-    // const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
-    //t as ecris jusqu au rn, maintenant tu dois skip le prochain chunk num
-    // std::string chunkSizeStr(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
-    // while ()
-    // {
-    //   wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), _offset, file_ptr);
-    //   totalReadBytes += wB;
-    // }
-    std::cout << "LAST CHUNK\n";
+    _offset = _offset + _headerEnd.size();
+    fillChunk(_offset, chunkDataStart, file_ptr);
     //tu termines sur rn
     return 0;
   }
+  
   //check if the current bytesstream has already the rn ie fin du current chunk
   const std::vector<unsigned char>::const_iterator itEnd = std::search(_tempBuff.begin() + chunkDataStart, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
   if (itEnd != _tempBuff.end())//trouve rn
