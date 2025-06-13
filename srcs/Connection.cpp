@@ -129,11 +129,11 @@ bool Connection::_isPythonFile(const std::string& path)
 
 void Connection::tryCgi()
 {
-  if (!_isPythonFile(_path))
-  {
-    _requestIsACGI = false;
-    return;
-  }
+  // if (!_isPythonFile(_path))
+  // {
+  //   _requestIsACGI = false;
+  //   return;
+  // }
 
   location = _searcher->getLocation(_sockFd, _host, _path);
   if (!location)
@@ -310,7 +310,7 @@ void Connection::prepareResponse(const Event* p)
       return;
     }
 
-    if (!_isPythonFile(_path) && _method == "GET")
+    if (/*!_isPythonFile(_path) &&*/ _method == "GET")
       _isPathValid();
     _checkBodySize();
     tryCgi();
