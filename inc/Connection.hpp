@@ -19,7 +19,7 @@ class Connection : public virtual IEventHandler, public Request
   void _isMethodAllowed() const;
   static void _isHttpVersionSupported(const std::string& version) ;
 
-  void isRequestaCGI();
+  void tryCgi();
   int send_to_cgi(const char * absPath);
   int readFILE();
 
@@ -30,7 +30,10 @@ class Connection : public virtual IEventHandler, public Request
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 10;       // 5 seconds for CGI requests
+  static const int _defaultCgiTimeout = 60;       // 5 seconds for CGI requests
+
+  // Helper method to check if a path has a Python file extension
+  static bool _isPythonFile(const std::string& path) ;
 
   Epoll* _manager;
   Searcher* _searcher;
@@ -41,7 +44,14 @@ class Connection : public virtual IEventHandler, public Request
   std::string _listDir;
   std::string _previousLoc;
   std::string absPath;
+
+  // Default env
+  std::list<std::string> _cgiEnv;
+  void _setCgiEnv();
+
   std::string cgiPath;
+
+
   std::string getContentType();
   std::vector<std::string> envStorage;
   std::vector<char*> env;
@@ -61,7 +71,7 @@ class Connection : public virtual IEventHandler, public Request
   void createMinPostEnv();
   void isFileToDeleteValid(int *result);
   //GET
-  std::ifstream MyReadFile;
+  std::ifstream file;
   char _buffer[4096];
 
   // Redirection response

@@ -1,7 +1,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <signal.h>
+#include <csignal>
 #include <cstring>
 #include <unistd.h>
 #include <cstdlib>
@@ -20,8 +20,10 @@ Connection::Connection():
   _sockFd(-1),
   location(),
   _continueReadingFile(),
+  _requestIsACGI(),
   _areHeadersSent(),
   _buffer(),
+  _requestStartTime(),
   _requestStarted(false)
 {
   // Clear the buffer//
@@ -36,8 +38,10 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _sockFd(-1),
   location(),
   _continueReadingFile(),
+  _requestIsACGI(),
   _areHeadersSent(),
   _buffer(),
+  _requestStartTime(),
   _requestStarted(false)
 {
   memset(_buffer, 0, sizeof(_buffer));
@@ -52,8 +56,10 @@ Connection::Connection(const Connection& other):
   _sockFd(other.getSockFd()),
   location(),
   _continueReadingFile(),
+  _requestIsACGI(),
   _areHeadersSent(),
   _buffer(),
+  _requestStartTime(),
   _requestStarted(false)
 {
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
@@ -75,9 +81,9 @@ Connection::~Connection()
 {
   try
   {
-    if (MyReadFile.is_open())
+    if (file.is_open())
     {
-      MyReadFile.close();
+      file.close();
     }
   }
   catch (...)
@@ -110,9 +116,25 @@ void Connection::_checkBodySize() const
     throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
 }
 
-void Connection::isRequestaCGI()
+bool Connection::_isPythonFile(const std::string& path)
 {
-  // if (_path.find('?') == std::string::npos) return false;
+  if (path.length() < 3)
+    return false;
+  
+  if (path.length() >= 3 && path.substr(path.length() - 3) == ".py")
+    return true;
+  
+  return false;
+}
+
+void Connection::tryCgi()
+{
+  if (!_isPythonFile(_path))
+  {
+    _requestIsACGI = false;
+    return;
+  }
+
   location = _searcher->getLocation(_sockFd, _host, _path);
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
@@ -142,7 +164,7 @@ void Connection::isRequestaCGI()
 
 std::string Connection::getContentType()
 {
-  std::size_t found = absPath.find(".");
+  const std::size_t found = absPath.find(".");
   if (found == std::string::npos)
     return NULL;
   std::string str = absPath.substr(found + 1);
@@ -169,6 +191,11 @@ void Connection::sendToCGI()
 
   signal(SIGPIPE, SIG_IGN);
   cgi_pid = fork();
+
+  if (cgi_pid < 0)
+    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
+
+
   arr[0] = const_cast<char*>(cgiPath.c_str());
   arr[1] = NULL;
   
@@ -181,11 +208,7 @@ void Connection::sendToCGI()
     perror("execve: ");
     exit(1);
   }
-  if (cgi_pid < 0)
-  {
-    throw Exception(ErrorMessages::E_FORK_FAILED, 500);
-  }
-  
+
   int status;
 
   for (int i = 0; i < _defaultCgiTimeout; ++i)
@@ -210,15 +233,46 @@ void Connection::sendToCGI()
   throw Exception(ErrorMessages::E_TIMEOUT, 408);
 }
 
+void Connection::setEnv()
+{
+  const ConfigType::CgiParams& cgi_params =
+    location->getCgiParams();
+
+  for (ConfigType::CgiParamsIt it = cgi_params.begin();
+      it != cgi_params.end();
+      ++it)
+  {
+
+  }
+}
+
+void Connection::_setCgiEnv()
+{
+  if (_method == "POST")
+  {
+    if (_headers.find("content-length") != _headers.end())
+      _cgiEnv.push_back("CONTENT_LENGTH=" + _headers["content-length"]);
+    if (_headers.find("content-type") != _headers.end())
+      _cgiEnv.push_back("CONTENT_TYPE=" + _headers["content-type"]);
+  }
+
+  int pos = 0;
+  if ((pos = _path.find('?') != std::string::npos))
+    _cgiEnv.push_back("QUERY_STRING=" + _path.substr(pos));
+
+
+}
+
+
 void Connection::createMinGetEnv()
 {
   envStorage.clear();
   env.clear();
   std::ostringstream s;
-  MyReadFile.open(absPath.c_str(), std::ios::binary | std::ios::ate);
-  int fileLenght = MyReadFile.tellg();
-  MyReadFile.close();
-  s << fileLenght;
+  file.open(absPath.c_str(), std::ios::binary | std::ios::ate);
+  long lenght = file.tellg();
+  file.close();
+  s << lenght;
   std::string contentLength(s.str());
   std::string contentType = getContentType();
   envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
@@ -279,10 +333,10 @@ void Connection::prepareResponse(const Event* p)
       return;
     }
 
-    if (_method == "GET")
+    if (!_isPythonFile(_path) && _method == "GET")
       _isPathValid();
     _checkBodySize();
-    isRequestaCGI();
+    tryCgi();
   } 
   catch (Exception& e)
   {
@@ -428,7 +482,6 @@ bool Connection::isNotEmpty(const Event* p)
 
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
-
   if (_isRequestTimedOut())
   {
     _handleRequestTimeout();
@@ -542,9 +595,9 @@ void Connection::_isPathValid()
 
 void Connection::sendResponseHeaders()
 {
-  MyReadFile.open(absPath.c_str(), std::ios::binary | std::ios::ate);
-  int fileLenght = MyReadFile.tellg();
-  MyReadFile.seekg(0, MyReadFile.beg);
+  file.open(absPath.c_str(), std::ios::binary | std::ios::ate);
+  int fileLenght = file.tellg();
+  file.seekg(0, file.beg);
   std::string contentType = getContentType();
   std::ostringstream headers;
   headers << "HTTP/1.1 200 OK\r\n"
@@ -572,14 +625,14 @@ int Connection::readFILE()
     _areHeadersSent = true;
     return 0;
   }
-  MyReadFile.read(_buffer, sizeof(_buffer));
-  if (MyReadFile.gcount() > 0)
+  file.read(_buffer, sizeof(_buffer));
+  if (file.gcount() > 0)
   {
-    send(_clientFd, _buffer, MyReadFile.gcount(), 0);
+    send(_clientFd, _buffer, file.gcount(), 0);
     memset(_buffer, 0, sizeof(_buffer));
     return 0;
   }
-  MyReadFile.close();
+  file.close();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   _areHeadersSent = false;
@@ -604,7 +657,7 @@ const std::string& Connection::_getErrorMessage(const long errnum)
   static const ConfigType::HttpStatusCode status = create_status_map();
   static const std::string unknown_error_str = "Unknown Error";
 
-  ConfigType::HttpStatusCodeIt it = status.find(errnum);
+  const ConfigType::HttpStatusCodeIt it = status.find(errnum);
   if (it != status.end())
   {
     return it->second;
@@ -716,8 +769,8 @@ void Connection::setEvent()
   _event = Event(_clientFd, this);
 }
 
-void Connection::setSockFd(int sockFd) { _sockFd = sockFd; }
-void Connection::setClientFd(int clientFd) { _clientFd = clientFd; }
+void Connection::setSockFd(const int sockFd) { _sockFd = sockFd; }
+void Connection::setClientFd(const int clientFd) { _clientFd = clientFd; }
 Event* Connection::getEvent() { return &_event; }
 int Connection::getSockFd() const { return _sockFd; }
 Epoll* Connection::getManager() const { return _manager; }
@@ -739,14 +792,14 @@ bool Connection::_isRequestTimedOut() const
   if (!_requestStarted)
     return false;
 
-  struct timeval currentTime;
+  timeval currentTime = {};
   gettimeofday(&currentTime, NULL);
   
   double elapsed = (currentTime.tv_sec - _requestStartTime.tv_sec) + 
                    (currentTime.tv_usec - _requestStartTime.tv_usec) / 1000000.0;
   
   // Use CGI timeout for CGI requests, regular timeout for others
-  double timeoutLimit = _requestIsACGI ? _defaultCgiTimeout : _defaultRequestTimeout;
+  const double timeoutLimit = _requestIsACGI ? _defaultCgiTimeout : _defaultRequestTimeout;
   
   return elapsed > timeoutLimit;
 }
@@ -756,7 +809,7 @@ double Connection::_getElapsedTime() const
   if (!_requestStarted)
     return 0.0;
 
-  timeval currentTime;
+  timeval currentTime = {};
   gettimeofday(&currentTime, NULL);
   
   return (currentTime.tv_sec - _requestStartTime.tv_sec) + 
@@ -794,7 +847,7 @@ const std::string* Connection::_getRedirectMessage(const long code)
 {
   static const ConfigType::HttpStatusCode status = create_status_map();
 
-  ConfigType::HttpStatusCodeIt it = status.find(code);
+  const ConfigType::HttpStatusCodeIt it = status.find(code);
 
   if (it != status.end())
   {
@@ -838,9 +891,3 @@ void Connection::resetTimeout()
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Request timer reset for fd " << _clientFd << "\n";
 }
-
-    // oss << "HTTP/1.1 200 OK\r\n"
-    // << "Content-Type: text/html; charset=UTF-8\r\n"
-    // << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-    // << "Content-Length: 0\r\n"
-    // << "\r\n";
