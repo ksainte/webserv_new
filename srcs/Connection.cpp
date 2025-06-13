@@ -362,15 +362,17 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
     return (0);
 
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size(); // you end up on the data
-  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of chunk
+  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of single chunk
 
 		// Check incomplete chunk data
-  if (bytesRead < chunkDataEnd)
-    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+  // bytesRead = bytesRead - chunkDataStart;//taille du chunk sans le chiffre du debut et \r\n
 
-  size_t ChunkDataSize = chunkDataEnd - _headerEnd.size() - chunkDataStart;
+  if (bytesRead < chunkDataEnd)
+  {
+    int rB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), chunkSize, file_ptr);
+  }
     
-  int rB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), ChunkDataSize, file_ptr);
+  int rB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), chunkSize, file_ptr);
 
   // std::clog <<"test is" << _tempBuff.data() + chunkDataEnd;
 
@@ -414,7 +416,6 @@ void Connection::handleChunkedRequest()
     if (bytesRead == -1)
       throw std::runtime_error("Error Reading from Client");
 
-    //if faut cleaner la data dans tempbuff avant de la mettre dans file!
     if(!transfer_encoding_chunked(file_ptr, bytesRead))
       break;
     memset(_tempBuff.data(), 0 , sizeof(_tempBuff));
