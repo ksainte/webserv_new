@@ -364,7 +364,7 @@ void Connection::fillChunk(size_t offset, size_t chunkDataStart, FILE *file_ptr)
   std::clog << "\n " << chunkSize << "\n";
 
   if (ss.fail() || chunk_size_str.empty())
-  throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
 
   if (chunkSize == 0)
   {
@@ -372,7 +372,6 @@ void Connection::fillChunk(size_t offset, size_t chunkDataStart, FILE *file_ptr)
     return ;
   }
   chunkDataStart += chunkSizeEnd + _headerEnd.size(); // you end up on the data ie 3 + 2
-  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();//end of single chunk
 
     int wB;
     size_t tempOffset;
@@ -385,6 +384,61 @@ void Connection::fillChunk(size_t offset, size_t chunkDataStart, FILE *file_ptr)
     fillChunk(offset, chunkDataStart, file_ptr);
 
 }
+
+
+// void Connection::fillEndOfQuickChunk(size_t chunkDataStart, size_t chunkDataEnd, size_t bytesRead, size_t offset, FILE *file_ptr)
+// {
+//   std::cout << "TEMPUU CHUNK\n";
+
+//   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
+
+//   if (it == _tempBuff.end())
+//   {
+//     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+//   }
+
+//   size_t chunkSizeEnd = it - (_tempBuff.begin() + chunkDataStart + offset);
+
+//   std::string chunk_size_str(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.begin() + chunkDataStart + offset + chunkSizeEnd);
+  
+//   std::stringstream ss(chunk_size_str);
+
+//   size_t chunkSize;
+
+//   ss >> std::hex >> chunkSize;
+
+//   std::clog << "chunk is " << chunkSize << "\n";
+
+//   if (ss.fail() || chunk_size_str.empty())
+//     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+
+//   if (chunkSize == 0)
+//   {
+//     std::clog << "chunkSize is 0\n";
+//     return ;
+//   }
+//   int wB;
+
+//   chunkDataStart += chunkSizeEnd + _headerEnd.size(); 
+//   chunkDataEnd += chunkSizeEnd + _headerEnd.size() + chunkSize + _headerEnd.size();//end of single chunk
+
+//   const std::vector<unsigned char>::const_iterator isItEnd = std::search(_tempBuff.begin() + chunkDataStart + offset, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
+//   if (isItEnd == _tempBuff.end())//ne trouve pas de rn dans le reste du bytestream alors
+//   {
+//     wB = fwrite(_tempBuff.data() + chunkDataStart + offset, sizeof(char), bytesRead - (chunkDataStart + offset), file_ptr);
+//     totalReadBytes += wB;
+//     return ;
+//   }
+//   //si il a trouve un rn
+//   size_t tempOffset;
+//   tempOffset = isItEnd - (_tempBuff.begin() + chunkDataStart + offset);//entre data start et rn
+//   wB = fwrite(_tempBuff.data() + chunkDataStart + offset, sizeof(char), tempOffset, file_ptr);
+//   offset += tempOffset;//data start + bytes to rn
+//   totalReadBytes += wB;
+//   offset = offset + _headerEnd.size();//se retrouver sur le prochain chiffre
+//   fillEndOfQuickChunk(chunkDataStart, chunkDataEnd, bytesRead, offset, file_ptr);
+// }
+
 
 
 int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
@@ -410,7 +464,7 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 
 
   std::clog << "cs " << chunkSize << "\n";
-  
+
   if (ss.fail() || chunk_size_str.empty())
     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
 
@@ -448,6 +502,9 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
     wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), _offset, file_ptr);//sans le rn
     std::cout << "QUICK NEXT CHUNK\n";
     totalReadBytes += wB;
+    // _offset = _offset + _headerEnd.size();// _offset + chunkDataStart = chunkDataEnd
+    // if (chunkDataEnd < bytesRead)
+    //   fillEndOfQuickChunk(chunkDataStart, chunkDataEnd, bytesRead, _offset, file_ptr);//on doit pas arreter tant que chunkDataEnd < bytesRead
     //tu termines avant le rn
     return 1;
   }
@@ -495,12 +552,20 @@ void Connection::handleChunkedRequest()
   FILE *file_ptr;
 	int bytesRead;
   int i = 0;
+  size_t tB;
 
   // _tempBuff.reserve(10000);
   _tempBuff.resize(100000);
   file_ptr = fopen("testx.html", "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
+  tB = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK);//on cherche le rn
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
+  if (it != _tempBuff.end())//on trouve le rn
+  {
+    bytesRead = recv(_clientFd, _tempBuff.data(), tB, 0);
+  }
+  //on trouve pas le rn
   while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0))//tu recois plusieurs chunk de style 50kb
   {
     std::clog << "size: " << (int) _tempBuff.size() << '\n';
