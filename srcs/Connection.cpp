@@ -368,38 +368,26 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
   int wB;
  
   wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart, file_ptr);
+  totalReadBytes += wB;
   std::clog << "start wb is "<<  wB << "\n";
-  std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
-  int tB;
-  while (bytesRead < chunkDataEnd)//current chunk is not finished
+  // std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
+
+  int currentRecv;
+
+  while (bytesRead + _tempBuff.size() < chunkDataEnd)
   {
-    std::cout << "CHUNK NOT FINISHED\n";
     memset(_tempBuff.data(), 0 , _tempBuff.size());
-    tB = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK);
-    const std::vector<unsigned char>::const_iterator itChunkEnd = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
-    if (itChunkEnd == _tempBuff.end())//ne trouve pas rn
-    {
-      tB = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
-      std::clog << "tB is "<<  tB << "\n";
-      bytesRead += tB;
-      std::clog << "bytesRead is "<<  bytesRead << "\n";
-      wB += fwrite(_tempBuff.data() , sizeof(char), tB, file_ptr);
-      std::clog << "wb is "<<  wB << "\n";
-      continue;
-    }
-    _offset = itChunkEnd - _tempBuff.begin() + _headerEnd.size();//tu es sur le prochain chunch(num)
-    tB = recv(_clientFd, _tempBuff.data(), _offset, 0);
-    bytesRead += tB;
-    std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
-    std::clog << "end bytesRead is "<<  bytesRead << "\n";
-    wB += fwrite(_tempBuff.data() , sizeof(char), _offset - _headerEnd.size(), file_ptr);//file finale sans rn
-  }//tu termines apres le rn
-
-  std::clog << "current chunk has wB of " << wB << "\n";
-
+    currentRecv = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
+    bytesRead += currentRecv;
+    wB = fwrite(_tempBuff.data(), sizeof(char), currentRecv, file_ptr);
+    totalReadBytes += wB;
+  }
+  memset(_tempBuff.data(), 0 , _tempBuff.size());
+  currentRecv = recv(_clientFd, _tempBuff.data(), chunkDataEnd - bytesRead, 0);
+  bytesRead += currentRecv;
+  wB = fwrite(_tempBuff.data(), sizeof(char), currentRecv - _headerEnd.size() , file_ptr);
   totalReadBytes += wB;
 
-  std::cout << "NEXT CHUNK\n";
   return (1);
 
 }
@@ -418,15 +406,30 @@ int Connection::simulateStartChunk()
   size_t chunkSizeEnd = it - _tempBuff.begin();
 
   std::string chunk_size_str(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
+
+  std::stringstream ss(chunk_size_str);
+
+  size_t chunkSize;
+
+  ss >> std::hex >> chunkSize;
+
+  std::clog << "sim cs is " << chunkSize << "\n";
+
+  if (chunkSize == 0)
+    return 0;
   
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
+  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
 
-  return chunkDataStart;
+  std::clog << "----------end sim\n";
+
+  return chunkDataEnd;
 }
 
-int Connection::handleNextChunktillRn(FILE *file_ptr, size_t offset)
+
+int  Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 {
-  std::cout << "CHUNK START WITH RN\n";
+	std::cout << "CHUNK START\n";
 
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
 
@@ -450,22 +453,17 @@ int Connection::handleNextChunktillRn(FILE *file_ptr, size_t offset)
   if (ss.fail() || chunk_size_str.empty())
     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
 
-  if (chunkSize == 0)
-  {
-    std::clog << "chunkSize is 0\n";
-    return (0);
-  }
-
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
-  // size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
+  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
 
   int wB;
  
-  wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), offset - chunkDataStart, file_ptr);
+  wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart - _headerEnd.size(), file_ptr);
 
   totalReadBytes += wB;
-  
-  return (1);
+
+
+  return 1;
 
 }
 
@@ -475,40 +473,40 @@ void Connection::handleChunkedRequest()
 	int bytesRead;
   int i = 0;
   // size_t tB;
-  size_t chunkDataStart;
-
-  _tempBuff.resize(100000);
-  file_ptr = fopen("testx.html", "wb");
+  size_t chunkDataEnd;
+  _tempBuff.resize(10000);
+  file_ptr = fopen("mami.mp4", "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
   while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK))//tu recois plusieurs chunk de style 50kb
   {
-    std::clog << "\nbytesRead is " << bytesRead << "\n";
+    std::clog << "\npeek bytesRead is " << bytesRead << "\n";
+    std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
 
     if (bytesRead == -1)
       throw std::runtime_error("Error Reading from Client");
     
-    chunkDataStart = simulateStartChunk();
+    chunkDataEnd = simulateStartChunk();
 
-    const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin() + chunkDataStart, _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
-    if (it == _tempBuff.end())//on trouve pas le rn dans ce stream
+    if (!chunkDataEnd)
+      break;
+
+    std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
+    memset(_tempBuff.data(), 0 , _tempBuff.size());
+    if (_tempBuff.capacity() < chunkDataEnd)
     {
       bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
       transfer_encoding_chunked(file_ptr, bytesRead);
       memset(_tempBuff.data(), 0 , _tempBuff.size());
       continue;
     }
-    _offset = it - _tempBuff.begin() + _headerEnd.size();//tu es sur le prochain chunch(num)
-    recv(_clientFd, _tempBuff.data(), _offset, 0);
-    //dans le current byte stream, apres le nb il y a un rn
-    if (!handleNextChunktillRn(file_ptr, _offset - _headerEnd.size()))
-      break;
+    bytesRead = recv(_clientFd, _tempBuff.data(), chunkDataEnd, 0);
+    readHoleChunkAtOnce(file_ptr, bytesRead);
     memset(_tempBuff.data(), 0 , _tempBuff.size());
     i++;
-    //l idee c est qu a la prochaine iteration t es toujours sur le chiffre
   }
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
-  std::clog << i++;
+  std::clog << i;
   fclose (file_ptr);
 }
 

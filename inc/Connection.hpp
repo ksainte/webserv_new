@@ -75,6 +75,7 @@ class Connection : public virtual IEventHandler, public Request
   void fillEndOfQuickChunk(size_t chunkDataStart, size_t chunkDataEnd, size_t bytesRead, size_t offset, FILE *file_ptr);
   int simulateStartChunk();
   int handleNextChunktillRn(FILE *file_ptr, size_t offset);
+  int  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;
