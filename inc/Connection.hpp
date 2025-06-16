@@ -73,6 +73,7 @@ class Connection : public virtual IEventHandler, public Request
   void  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
   int simulateStartChunk();
   void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
+  const std::string getDataName();
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;

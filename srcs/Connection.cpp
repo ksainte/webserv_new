@@ -450,7 +450,7 @@ void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
 
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
-  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
+  // size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
 
   int wB;
  
@@ -460,13 +460,30 @@ void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 
 }
 
+
+const std::string Connection::getDataName()
+{
+  std::string dataName;
+  std::size_t found;
+
+  dataName = _path;
+  found = dataName.find("=");
+  if (found == std::string::npos)
+    throw std::runtime_error("Error Reading from Client");
+  dataName = dataName.substr(found + 1);
+  return (dataName);
+}
+
 void Connection::handleChunkedRequest()
 {
   FILE *file_ptr;
 	int bytesRead;
   size_t chunkDataEnd;
+  std::string dataName;
+
   _tempBuff.resize(10000);
-  file_ptr = fopen("mamw.mp4", "wb");
+  dataName = getDataName();
+  file_ptr = fopen(dataName.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
   while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK))
@@ -530,12 +547,6 @@ void Connection::prepareEnvforPostCGI()
   resetTimeout();
 }
 
-// for (std::map < std::string, std::string>::iterator it = _headers.begin(); it != _headers.end();++it)
-// {
-//   std::clog << it->first << "\n";
-//   std::clog << it->second << "\n";
-//   std::clog << "--------------\n";
-// }
 
 void Connection::isFileToDeleteValid(int *result)
 {
