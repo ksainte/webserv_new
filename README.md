@@ -6,6 +6,8 @@ prepare envcgi  change status code to the correct one and handle exception
 
 access & isDir  verify that user has permission, otherwise return 403
 
+tryCgi invalid status code 403 instead of 404 not found when script doenst exist
+
 verify status code 
 
 cgi env    check that env var name contains only alphanumeric character

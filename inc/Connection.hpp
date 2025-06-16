@@ -30,7 +30,7 @@ class Connection : public virtual IEventHandler, public Request
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 60;       // 5 seconds for CGI requests
+  static const int _defaultCgiTimeout = 60 * 10;       // 5 seconds for CGI requests
 
   // Helper method to check if a path has a Python file extension
   static bool _isPythonFile(const std::string& path) ;
@@ -60,6 +60,7 @@ class Connection : public virtual IEventHandler, public Request
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
   void prepareEnvforPostCGI();
+  void handleNonCgiPost();
   void prepareDeleteRequest();
   bool isNotEmpty(const Event* p);
   const LocationBlock* location;
@@ -118,6 +119,8 @@ class Connection : public virtual IEventHandler, public Request
     m[503] = "503 Service Unavailable";
     return m;
   }
+
+  std::string getCurrentDate();
 
 public:
   Connection();

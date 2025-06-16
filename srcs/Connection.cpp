@@ -147,7 +147,7 @@ void Connection::tryCgi()
   p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
   if (!p || p[0].empty())
     return ;
-  cgiPath.append("/");
+  // cgiPath.append("/");
   cgiPath.append((*p)[0]);
   stat(cgiPath.c_str(), &stats);
   if (!access(cgiPath.c_str(), X_OK))
@@ -243,25 +243,25 @@ void Connection::sendToCGI()
   throw Exception(ErrorMessages::E_TIMEOUT, 408);
 }
 
-void Connection::createMinGetEnv()
-{
-  envStorage.clear();
-  env.clear();
-  std::ostringstream s;
-  file.open(absPath.c_str(), std::ios::binary | std::ios::ate);
-  long lenght = file.tellg();
-  file.close();
-  s << lenght;
-  std::string contentLength(s.str());
-  std::string contentType = getContentType();
-  envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
-  envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
-  envStorage.push_back("QUERY_STRING=" + absPath);
-}
+// void Connection::createMinGetEnv()
+// {
+//   envStorage.clear();
+//   env.clear();
+//   std::ostringstream s;
+//   file.open(absPath.c_str(), std::ios::binary | std::ios::ate);
+//   long lenght = file.tellg();
+//   file.close();
+//   s << lenght;
+//   std::string contentLength(s.str());
+//   std::string contentType = getContentType();
+//   envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
+//   envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
+//   envStorage.push_back("QUERY_STRING=" + absPath);
+// }
 
 int Connection::prepareEnvForGetCGI()
 {
-  createMinGetEnv();
+  // createMinGetEnv();
   const ConfigType::CgiParams& p = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
@@ -358,19 +358,63 @@ void Connection::discardDupEnvVar()
   }
 }
 
+void Connection::handleNonCgiPost()
+{
+  // Read the request body
+  std::string body;
+  if (_headers.find("content-length") != _headers.end())
+  {
+    size_t contentLength = strtoul(_headers["content-length"].c_str(), NULL, 10);
+    std::vector<char> buffer(contentLength);
+    ssize_t bytesRead = 0;
+    size_t totalRead = 0;
+    
+    while (totalRead < contentLength)
+    {
+      bytesRead = recv(_clientFd, buffer.data() + totalRead, contentLength - totalRead, 0);
+      if (bytesRead <= 0)
+        break;
+      totalRead += bytesRead;
+    }
+    
+    if (totalRead > 0)
+    {
+      body = std::string(buffer.data(), totalRead);
+    }
+  }
+
+  // Send a response indicating the server has read the body
+  const std::string responseBody = "Server has read the POST body successfully.";
+  std::ostringstream oss;
+  oss << "HTTP/1.1 200 OK\r\n"
+      << "Content-Type: text/plain\r\n"
+      << "Content-Length: " << responseBody.length() << "\r\n"
+      << "Date: " << getCurrentDate() << "\r\n"
+      << "\r\n"
+      << responseBody;
+  
+  // Send the response in chunks if necessary
+  std::string response = oss.str();
+  size_t totalSent = 0;
+  while (totalSent < response.length())
+  {
+    ssize_t sent = send(_clientFd, response.c_str() + totalSent, response.length() - totalSent, 0);
+    if (sent <= 0)
+      break;
+    totalSent += sent;
+  }
+  
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  resetTimeout();
+}
+
 void Connection::prepareEnvforPostCGI()
 {
-  std::ostringstream oss;
   if (!_requestIsACGI)
   {
-    oss << "HTTP/1.1 204 No Content\r\n"
-        << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-        << "\r\n";
-    send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
-    _manager->unregisterEvent(_clientFd);
-    close(_clientFd);
-    resetTimeout();
-    return ;
+    handleNonCgiPost();
+    return;
   }
   createMinPostEnv();
   const ConfigType::CgiParams& params = location->getCgiParams();
@@ -568,6 +612,9 @@ void Connection::_isPathValid()
 
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+
+  if (_isPythonFile(_path))
+    return ;
 
   const std::string prefix(location->getPrefix());
   // std::clog << prefix;
@@ -912,4 +959,13 @@ void Connection::resetTimeout()
   _requestStarted = false;
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Request timer reset for fd " << _clientFd << "\n";
+}
+
+std::string Connection::getCurrentDate()
+{
+  time_t now = time(0);
+  struct tm tm = *gmtime(&now);
+  char time_buffer[256];
+  strftime(time_buffer, sizeof(time_buffer), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+  return std::string(time_buffer);
 }
