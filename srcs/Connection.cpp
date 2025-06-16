@@ -335,7 +335,7 @@ void Connection::discardDupEnvVar()
 }
 
 
-int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
+void  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 {
 	std::cout << "CHUNK START\n";
 
@@ -369,8 +369,6 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
  
   wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart, file_ptr);
   totalReadBytes += wB;
-  std::clog << "start wb is "<<  wB << "\n";
-  // std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
 
   int currentRecv;
 
@@ -387,8 +385,6 @@ int  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
   bytesRead += currentRecv;
   wB = fwrite(_tempBuff.data(), sizeof(char), currentRecv - _headerEnd.size() , file_ptr);
   totalReadBytes += wB;
-
-  return (1);
 
 }
 
@@ -427,7 +423,7 @@ int Connection::simulateStartChunk()
 }
 
 
-int  Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
+void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 {
 	std::cout << "CHUNK START\n";
 
@@ -462,23 +458,18 @@ int  Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 
   totalReadBytes += wB;
 
-
-  return 1;
-
 }
 
 void Connection::handleChunkedRequest()
 {
   FILE *file_ptr;
 	int bytesRead;
-  int i = 0;
-  // size_t tB;
   size_t chunkDataEnd;
   _tempBuff.resize(10000);
-  file_ptr = fopen("mami.mp4", "wb");
+  file_ptr = fopen("mamw.mp4", "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
-  while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK))//tu recois plusieurs chunk de style 50kb
+  while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK))
   {
     std::clog << "\npeek bytesRead is " << bytesRead << "\n";
     std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
@@ -503,10 +494,8 @@ void Connection::handleChunkedRequest()
     bytesRead = recv(_clientFd, _tempBuff.data(), chunkDataEnd, 0);
     readHoleChunkAtOnce(file_ptr, bytesRead);
     memset(_tempBuff.data(), 0 , _tempBuff.size());
-    i++;
   }
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
-  std::clog << i;
   fclose (file_ptr);
 }
 
@@ -692,6 +681,7 @@ bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 
 void Connection::findPathFinalExtension()
 {
+  std::clog << "\nPath was " << _path << "\n";
   std::size_t i;
   const std::string validExtension[] = {"cgi", "py", "php"}; 
   std::size_t found;
@@ -719,13 +709,13 @@ void Connection::findPathFinalExtension()
       _path.resize(found - 1);
     i++;
   }
-  std::clog << "\npath is " << _path << "\n";
+  std::clog << "\nPath is " << _path << "\n";
 }
 
 
 void Connection::_isPathValid()
 {
-  // findPathFinalExtension();
+  findPathFinalExtension();
   location = _searcher->getLocation(_sockFd, _host, _path);
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);

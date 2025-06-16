@@ -29,8 +29,8 @@ class Connection : public virtual IEventHandler, public Request
   static const int _defaultMaxBodySize = 50 * 1000 * 1000;
   
   // Timeout configuration (in seconds)
-  static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 10;       // 5 seconds for CGI requests
+  static const int _defaultRequestTimeout = 30;  // 30 seconds for regular requests
+  static const int _defaultCgiTimeout = 30;       // 5 seconds for CGI requests
 
   Epoll* _manager;
   Searcher* _searcher;
@@ -70,12 +70,9 @@ class Connection : public virtual IEventHandler, public Request
   // std::string 				_tempBuff;
   std::vector<unsigned char> _tempBuff;
   std::string str;
-  int  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
-  void fillChunk(size_t _offset, size_t chunkDataStart, FILE *file_ptr);
-  void fillEndOfQuickChunk(size_t chunkDataStart, size_t chunkDataEnd, size_t bytesRead, size_t offset, FILE *file_ptr);
+  void  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
   int simulateStartChunk();
-  int handleNextChunktillRn(FILE *file_ptr, size_t offset);
-  int  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
+  void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;
