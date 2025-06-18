@@ -370,7 +370,7 @@ void  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
   wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart, file_ptr);
   totalReadBytes += wB;
 
-  int currentRecv;
+  size_t currentRecv;
 
   while (bytesRead + _tempBuff.size() < chunkDataEnd)
   {
@@ -486,7 +486,8 @@ void Connection::handleChunkedRequest()
   file_ptr = fopen(dataName.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
-  while (bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK))
+  
+  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
     std::clog << "\npeek bytesRead is " << bytesRead << "\n";
     std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
