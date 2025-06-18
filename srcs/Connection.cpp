@@ -469,7 +469,11 @@ const std::string Connection::getDataName()
   dataName = _path;
   found = dataName.find("=");
   if (found == std::string::npos)
-    throw std::runtime_error("Error Reading from Client");
+  {
+    if (_headers["transfer-encoding"] == "chunked")
+      throw std::runtime_error("Error Reading from Client");
+    return NULL;
+  }
   dataName = dataName.substr(found + 1);
   return (dataName);
 }
@@ -477,16 +481,17 @@ const std::string Connection::getDataName()
 void Connection::handleChunkedRequest()
 {
   FILE *file_ptr;
-	int bytesRead;
+	size_t bytesRead;
   size_t chunkDataEnd;
   std::string dataName;
 
   _tempBuff.resize(10000);
   dataName = getDataName();
-  file_ptr = fopen(dataName.c_str(), "wb");
+  std::string uploadDir = "uploads/";
+  uploadDir.append(dataName);
+  file_ptr = fopen(uploadDir.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
-  
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
     std::clog << "\npeek bytesRead is " << bytesRead << "\n";
@@ -515,22 +520,148 @@ void Connection::handleChunkedRequest()
   }
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
   fclose (file_ptr);
+
+  absPath = uploadDir;
+  std::string cT  = getContentType();
+  std::ostringstream oss;
+  oss << "HTTP/1.1 201 Created\r\n"
+      << "Content-Type: text/plain\r\n"
+      << "Location: http://127.0.0.2:8080/uploads/"
+      << dataName << "\r\n"
+      << "Content-Length: 0\r\n"
+      << "\r\n"; 
+  send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
+}
+
+int Connection::simulateStartBody()
+{
+  std::cout << "SUMULATE BODY START\n";
+
+  recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK);
+
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
+
+  if (it == _tempBuff.end())
+  {
+    throw std::runtime_error("Error Reading from Client");
+  }
+
+  size_t MetaDataBytesEnd = it - _tempBuff.begin();
+  
+  size_t BodyDataStart = MetaDataBytesEnd + _headersEnd.size();
+
+  memset(_tempBuff.data(), 0 , _tempBuff.size());
+
+  std::clog << "----------end sim\n";
+
+  return BodyDataStart;
+}
+
+
+size_t Connection::searchForBoundary(std::string boundary)
+{
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), boundary.begin(), boundary.end(), isEqual);
+
+  if (it == _tempBuff.end())
+  {
+    return (0);
+  }
+  size_t boundaryPos = it - _tempBuff.begin();
+
+  return boundaryPos;
+}
+
+void Connection::handleMultiPartRequest()
+{
+  FILE *file_ptr;
+	size_t bytesRead;
+  size_t BodyDataStart;
+  std::string dataName;
+  size_t boundaryPos;
+  size_t wB;
+
+  //add code to handle upload from form!
+  _tempBuff.resize(10000);
+  dataName = getDataName();
+  std::string uploadDir = "uploads/";
+  uploadDir.append(dataName);
+  file_ptr = fopen(uploadDir.c_str(), "wb");
+  memset(_tempBuff.data(), 0 , _tempBuff.size());
+
+  std::string headersBoundary;
+
+  size_t found = _headers["content-type"].find("=");
+  if (found == std::string::npos)
+    throw std::runtime_error("Error Reading from Client");
+  
+  headersBoundary = _headers["content-type"].substr(found + 1);
+  std::string boundary = "--";
+  boundary.append(headersBoundary);
+  std::clog << "boundary is "<<  boundary << "\n";
+
+  BodyDataStart = simulateStartBody();
+
+  std::clog << "BodyDataStart is "<<  BodyDataStart << "\n";
+
+  bytesRead = recv(_clientFd, _tempBuff.data(), BodyDataStart, 0);//on se retrouve sur le vrai bytes stream!
+
+  memset(_tempBuff.data(), 0 , _tempBuff.size());
+
+  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
+  {
+    std::clog << "\npeek bytesRead is " << bytesRead << "\n";
+    std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
+
+    if (bytesRead == -1)
+      throw std::runtime_error("Error Reading from Client");
+    
+    boundaryPos = searchForBoundary(boundary);//if 0 we can go on!
+    memset(_tempBuff.data(), 0 , _tempBuff.size());
+    if (boundaryPos == 0)
+    {
+      bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
+      wB = fwrite(_tempBuff.data(), sizeof(char), bytesRead, file_ptr);
+      totalReadBytes += wB;
+      memset(_tempBuff.data(), 0 , _tempBuff.size());
+      continue;
+    }
+    bytesRead = recv(_clientFd, _tempBuff.data(), boundaryPos, 0);
+    wB = fwrite(_tempBuff.data(), sizeof(char), bytesRead - _headerEnd.size(), file_ptr);
+    totalReadBytes += wB;
+    // memset(_tempBuff.data(), 0 , _tempBuff.size());
+    break;
+  }
+  if (boundaryPos == 0)
+    throw std::runtime_error("Error Reading from Client");
+  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
+  fclose (file_ptr);
+
+  absPath = uploadDir;
+  std::string cT  = getContentType();
+  std::ostringstream oss;
+  oss << "HTTP/1.1 201 Created\r\n"
+      << "Content-Type: text/plain\r\n"
+      << "Location: http://127.0.0.2:8080/uploads/"
+      << dataName << "\r\n"
+      << "Content-Length: 0\r\n"
+      << "\r\n"; 
+  send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
 }
 
 void Connection::prepareEnvforPostCGI()
 {
   std::ostringstream oss;
-  if (!_requestIsACGI)
-  {
-    oss << "HTTP/1.1 204 No Content\r\n"
-        << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-        << "\r\n";
-    send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
-    _manager->unregisterEvent(_clientFd);
-    close(_clientFd);
-    resetTimeout();
-    return ;
-  }
+  // if (!_requestIsACGI)
+  // {
+  //   oss << "HTTP/1.1 204 No Content\r\n"
+  //       << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
+  //       << "\r\n";
+  //   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
+  //   _manager->unregisterEvent(_clientFd);
+  //   close(_clientFd);
+  //   resetTimeout();
+  //   return ;
+  // }
   createMinPostEnv();
   const ConfigType::CgiParams& params = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = params.begin(); it != params.end(); ++it)
@@ -541,8 +672,10 @@ void Connection::prepareEnvforPostCGI()
   env.push_back(NULL);
   if (_headers["transfer-encoding"] == "chunked")
     handleChunkedRequest();
-  else
+  else if (_requestIsACGI)
     sendToCGI();
+  else
+    handleMultiPartRequest();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   resetTimeout();
@@ -589,7 +722,7 @@ void Connection::prepareDeleteRequest()
     "</html>";
   std::ostringstream oss;
   oss << "HTTP/1.1 200 OK\r\n"
-      << "Content-Type: text/html; charset=UTF-8\r\n"
+      << "Content-Type: text/plain\r\n"
       << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
       << "Content-Length: " << body.size() << "\r\n"
       << "\r\n"

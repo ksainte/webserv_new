@@ -26,7 +26,7 @@ class Connection : public virtual IEventHandler, public Request
   void  _checkBodySize() const;
 
   // 50MB
-  static const int _defaultMaxBodySize = 50 * 1000 * 1000;
+  static const int _defaultMaxBodySize = 500 * 1000 * 1000;
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 30;  // 30 seconds for regular requests
@@ -71,6 +71,9 @@ class Connection : public virtual IEventHandler, public Request
   std::vector<unsigned char> _tempBuff;
   std::string str;
   void  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
+  void handleMultiPartRequest();
+  int simulateStartBody();
+  size_t searchForBoundary(std::string boundary);
   int simulateStartChunk();
   void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
   const std::string getDataName();
