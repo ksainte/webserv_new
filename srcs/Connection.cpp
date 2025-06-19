@@ -662,15 +662,65 @@ void Connection::handleMultiPartRequest()
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
   fclose (file_ptr);
 
+  std::string body =
+  "<!DOCTYPE html>\n"
+  "<html lang=\"en\">\n"
+  "<head>\n"
+  "    <meta charset=\"UTF-8\">\n"
+  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+  "    <title>upload</title>\n"
+  "    <style>\n"
+  "        body {\n"
+  "            font-family: Arial, sans-serif;\n"
+  "            margin: 40px;\n"
+  "            background-color: #f4f4f4;\n"
+  "            color: #333;\n"
+  "            text-align: center;\n"
+  "        }\n"
+  "        h1 {\n"
+  "            color: #d63384;\n"
+  "        }\n"
+  "        p {\n"
+  "            line-height: 1.6;\n"
+  "        }\n"
+  "        .container {\n"
+  "            background-color: #ffffff;\n"
+  "            padding: 20px;\n"
+  "            border-radius: 8px;\n"
+  "            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n"
+  "            display: inline-block;\n"
+  "            max-width: 600px;\n"
+  "        }\n"
+  "        footer {\n"
+  "            margin-top: 30px;\n"
+  "            font-size: 0.9em;\n"
+  "            color: #666;\n"
+  "        }\n"
+  "    </style>\n"
+  "</head>\n"
+  "<body>\n"
+  "    <div class=\"container\">\n"
+  "        <h1>Webserv</h1>\n"
+  "        <p>File uploaded successfully</p>\n"
+  "        <p>Your upload is available at Location: "
+  "http://127.0.0.2:8080/uploads/"
+  + dataName +
+  "</p>\n"
+  "    </div>\n"
+  "</body>\n"
+  "</html>\n";
+
+
   absPath = uploadDir;//si tu v
   std::string cT  = getContentType();
   std::ostringstream oss;
   oss << "HTTP/1.1 201 Created\r\n"
-      << "Content-Type: text/plain\r\n"
+      << "Content-Type: text/html\r\n"
       << "Location: http://127.0.0.2:8080/uploads/"
       << dataName << "\r\n"
-      << "Content-Length: 0\r\n"
-      << "\r\n"; 
+      << "Content-Length: " << body.size() << "\r\n"
+      << "\r\n"
+      << body;
   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
 }
 
