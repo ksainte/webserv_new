@@ -390,7 +390,6 @@ void  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 
 int Connection::simulateStartChunk()
 {
-  std::cout << "SUMULATE CHUNK START\n";
 
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
 
@@ -416,8 +415,6 @@ int Connection::simulateStartChunk()
   
   size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
   size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
-
-  std::clog << "----------end sim\n";
 
   return chunkDataEnd;
 }
@@ -535,8 +532,6 @@ void Connection::handleChunkedRequest()
 
 int Connection::simulateStartBody()
 {
-  std::cout << "SUMULATE BODY START\n";
-
   recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK);
 
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headersEnd.begin(), _headersEnd.end(), isEqual);
@@ -549,8 +544,6 @@ int Connection::simulateStartBody()
   size_t MetaDataBytesEnd = it - _tempBuff.begin();
   
   size_t BodyDataStart = MetaDataBytesEnd + _headersEnd.size();
-
-  std::clog << "----------end sim\n";
 
   return BodyDataStart;
 }
@@ -575,144 +568,105 @@ std::string Connection::searchMetaData(size_t BodyDataStart)
 
   const std::vector<unsigned char>::const_iterator itEnd  =  _tempBuff.begin() + BodyDataStart;
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.begin() + BodyDataStart, filename.begin(), filename.end(), isEqual);
-
   if (it == itEnd)
   {
     throw std::runtime_error("Error Reading from Client");
   }
-
   const std::vector<unsigned char>::const_iterator itStartMarks = std::find(it, itEnd, '"');
   const std::vector<unsigned char>::const_iterator itEndMarks = std::find(itStartMarks + 1, itEnd, '"');
   std::string name(itStartMarks + 1, itEndMarks);
-  
-  std::clog << "name is " << name << "\n";
-  return name;
+  return (name);
 }
 
-void Connection::handleMultiPartRequest()
+std::string Connection::findBoundaryInHeaders()
 {
-  FILE *file_ptr;
-	size_t bytesRead;
-  size_t BodyDataStart;
-  std::string dataName;
-  size_t boundaryPos;
-  size_t wB;
-
-
-  //add code to handle upload from form!
-  _tempBuff.resize(10000);
-  dataName = getDataName();
   memset(_tempBuff.data(), 0 , _tempBuff.size());
-
   std::string headersBoundary;
 
   size_t found = _headers["content-type"].find("=");
   if (found == std::string::npos)
     throw std::runtime_error("Error Reading from Client");
-  
   headersBoundary = _headers["content-type"].substr(found + 1);
   std::string boundary = "--";
   boundary.append(headersBoundary);
-  std::clog << "boundary is "<<  boundary << "\n";
+  return (boundary);
+}
+
+FILE *Connection::prepareFileAndSkipMetadata()
+{
+  FILE *file_ptr;
+  size_t BodyDataStart;
+  std::string uploadDir = "uploads/";
 
   BodyDataStart = simulateStartBody();
-
-
+  dataName = getDataName();
   if (dataName == "")
     dataName = searchMetaData(BodyDataStart);
-
-  std::string uploadDir = "uploads/";
   uploadDir.append(dataName);
   file_ptr = fopen(uploadDir.c_str(), "wb");
-
   memset(_tempBuff.data(), 0 , _tempBuff.size());
-
-  std::clog << "BodyDataStart is "<<  BodyDataStart << "\n";
-
-  bytesRead = recv(_clientFd, _tempBuff.data(), BodyDataStart, 0);//on se retrouve sur le vrai bytes stream!
-
+  recv(_clientFd, _tempBuff.data(), BodyDataStart, 0);
   memset(_tempBuff.data(), 0 , _tempBuff.size());
+  return (file_ptr);
+}
 
-  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
-  {
-    std::clog << "\npeek bytesRead is " << bytesRead << "\n";
-    std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
+std::string ResponseBody(std::string dataName)
+{
+    std::string body =
+    "<!DOCTYPE html>\n"
+    "<html lang=\"en\">\n"
+    "<head>\n"
+    "    <meta charset=\"UTF-8\">\n"
+    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+    "    <title>upload</title>\n"
+    "    <style>\n"
+    "        body {\n"
+    "            font-family: Arial, sans-serif;\n"
+    "            margin: 40px;\n"
+    "            background-color: #f4f4f4;\n"
+    "            color: #333;\n"
+    "            text-align: center;\n"
+    "        }\n"
+    "        h1 {\n"
+    "            color: #d63384;\n"
+    "        }\n"
+    "        p {\n"
+    "            line-height: 1.6;\n"
+    "        }\n"
+    "        .container {\n"
+    "            background-color: #ffffff;\n"
+    "            padding: 20px;\n"
+    "            border-radius: 8px;\n"
+    "            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n"
+    "            display: inline-block;\n"
+    "            max-width: 600px;\n"
+    "        }\n"
+    "        footer {\n"
+    "            margin-top: 30px;\n"
+    "            font-size: 0.9em;\n"
+    "            color: #666;\n"
+    "        }\n"
+    "    </style>\n"
+    "</head>\n"
+    "<body>\n"
+    "    <div class=\"container\">\n"
+    "        <h1>Webserv</h1>\n"
+    "        <p>File uploaded successfully</p>\n"
+    "        <p>Your upload is available at Location: "
+    "http://127.0.0.2:8080/uploads/"
+    + dataName +
+    "</p>\n"
+    "    </div>\n"
+    "</body>\n"
+    "</html>\n";
+    return (body);
+}
 
-    if (bytesRead == -1)
-      throw std::runtime_error("Error Reading from Client");
-    
-    boundaryPos = searchForBoundary(boundary);//if 0 we can go on!
-    memset(_tempBuff.data(), 0 , _tempBuff.size());
-    if (boundaryPos == 0)
-    {
-      bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
-      wB = fwrite(_tempBuff.data(), sizeof(char), bytesRead, file_ptr);
-      totalReadBytes += wB;
-      memset(_tempBuff.data(), 0 , _tempBuff.size());
-      continue;
-    }
-    bytesRead = recv(_clientFd, _tempBuff.data(), boundaryPos, 0);
-    wB = fwrite(_tempBuff.data(), sizeof(char), bytesRead - _headerEnd.size(), file_ptr);
-    totalReadBytes += wB;
-    // memset(_tempBuff.data(), 0 , _tempBuff.size());
-    break;
-  }
-  if (boundaryPos == 0)
-    throw std::runtime_error("Error Reading from Client");
-  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
-  fclose (file_ptr);
+void Connection::sendMultiPartResponse()
+{
+  std::string body;
 
-  std::string body =
-  "<!DOCTYPE html>\n"
-  "<html lang=\"en\">\n"
-  "<head>\n"
-  "    <meta charset=\"UTF-8\">\n"
-  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-  "    <title>upload</title>\n"
-  "    <style>\n"
-  "        body {\n"
-  "            font-family: Arial, sans-serif;\n"
-  "            margin: 40px;\n"
-  "            background-color: #f4f4f4;\n"
-  "            color: #333;\n"
-  "            text-align: center;\n"
-  "        }\n"
-  "        h1 {\n"
-  "            color: #d63384;\n"
-  "        }\n"
-  "        p {\n"
-  "            line-height: 1.6;\n"
-  "        }\n"
-  "        .container {\n"
-  "            background-color: #ffffff;\n"
-  "            padding: 20px;\n"
-  "            border-radius: 8px;\n"
-  "            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n"
-  "            display: inline-block;\n"
-  "            max-width: 600px;\n"
-  "        }\n"
-  "        footer {\n"
-  "            margin-top: 30px;\n"
-  "            font-size: 0.9em;\n"
-  "            color: #666;\n"
-  "        }\n"
-  "    </style>\n"
-  "</head>\n"
-  "<body>\n"
-  "    <div class=\"container\">\n"
-  "        <h1>Webserv</h1>\n"
-  "        <p>File uploaded successfully</p>\n"
-  "        <p>Your upload is available at Location: "
-  "http://127.0.0.2:8080/uploads/"
-  + dataName +
-  "</p>\n"
-  "    </div>\n"
-  "</body>\n"
-  "</html>\n";
-
-
-  absPath = uploadDir;//si tu v
-  std::string cT  = getContentType();
+  body = ResponseBody(dataName);
   std::ostringstream oss;
   oss << "HTTP/1.1 201 Created\r\n"
       << "Content-Type: text/html\r\n"
@@ -722,6 +676,41 @@ void Connection::handleMultiPartRequest()
       << "\r\n"
       << body;
   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
+}
+
+void Connection::handleMultiPartRequest()
+{
+  FILE *file_ptr;
+	size_t bytesRead;
+  size_t boundaryPos;
+  std::string boundary;
+
+  _tempBuff.resize(10000);
+  boundary = findBoundaryInHeaders();
+  file_ptr = prepareFileAndSkipMetadata();
+  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
+  {
+    if (bytesRead == -1)
+      throw std::runtime_error("Error Reading from Client");
+    
+    boundaryPos = searchForBoundary(boundary);
+    memset(_tempBuff.data(), 0 , _tempBuff.size());
+    if (boundaryPos == 0)
+    {
+      bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
+      totalReadBytes += fwrite(_tempBuff.data(), sizeof(char), bytesRead, file_ptr);
+      memset(_tempBuff.data(), 0 , _tempBuff.size());
+      continue;
+    }
+    bytesRead = recv(_clientFd, _tempBuff.data(), boundaryPos, 0);
+    totalReadBytes += fwrite(_tempBuff.data(), sizeof(char), bytesRead - _headerEnd.size(), file_ptr);
+    break;
+  }
+  if (boundaryPos == 0)
+    throw std::runtime_error("Error Reading from Client");
+  fclose (file_ptr);
+  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
+  sendMultiPartResponse();
 }
 
 void Connection::prepareEnvforPostCGI()

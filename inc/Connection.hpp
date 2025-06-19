@@ -67,7 +67,7 @@ class Connection : public virtual IEventHandler, public Request
   //GET
   std::ifstream MyReadFile;
   char _buffer[4096];
-  // std::string 				_tempBuff;
+  std::string dataName;
   std::vector<unsigned char> _tempBuff;
   std::string str;
   void  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
@@ -78,6 +78,9 @@ class Connection : public virtual IEventHandler, public Request
   void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
   std::string getDataName();
   std::string searchMetaData(size_t BodyDataStart);
+  std::string findBoundaryInHeaders();
+  FILE *prepareFileAndSkipMetadata();
+  void sendMultiPartResponse();
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;
