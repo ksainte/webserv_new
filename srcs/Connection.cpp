@@ -112,8 +112,8 @@ void Connection::_checkBodySize() const
   if (val && bodySize((*val)[0]) != -1)
     maxBodySize = bodySize((*val)[0]);
 
-  if (requestBodySize > maxBodySize)
-    throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 400);
+  if (requestBodySize > maxBodySize || requestBodySize > _defaultMaxBodySize)
+    throw Exception(ErrorMessages::E_MAX_BODY_SIZE, 413);
 }
 
 bool Connection::_isPythonFile(const std::string& path)
@@ -301,6 +301,7 @@ void Connection::prepareResponse(const Event* p)
   try
   {
     extractHeaders();
+    _checkUriLen();
     storeHeaders();
     _isMethodAllowed();
     if (_isRedirect())
@@ -636,6 +637,8 @@ void Connection::_isPathValid()
   // we send the file
   if (!isDir(absPath.c_str())) return;
 
+  absPath.append("/");
+
   // If not we append the uri to absPath
   absPath.append(_path.substr(strlen(prefix.c_str())));
 
@@ -947,6 +950,15 @@ void Connection::_setRedirect()
   ss << "\r\n";
 
   _redirect = ss.str();
+}
+
+void  Connection::_checkUriLen() const {
+
+  const size_t MAX_URI_LENGTH = 8192;
+
+  if (_path.length() > MAX_URI_LENGTH) {
+    throw Exception(ErrorMessages::E_URI_TOO_LONG, 414);
+  }
 }
 
 bool Connection::isTimedOut() const

@@ -2,6 +2,7 @@
 #include "../inc/Logger.hpp"
 #include <cstring>
 #include <sys/socket.h>
+#include <algorithm>
 #include <cstdlib>
 #include "../inc/Exception.hpp"
 #include "../inc/constants/ErrorMessages.hpp"
@@ -77,6 +78,9 @@ void Request::extractHeaders()
 
   if (it == _buf.end())
   {
+	if (bytesRead == _buffSize
+		&& std::find(_buf.begin(), _buf.end(), static_cast<unsigned char>('\n')) == _buf.end())
+		throw Exception(ErrorMessages::E_URI_TOO_LONG, 414);
     if (bytesRead == _buffSize)
       throw Exception(ErrorMessages::E_HEADERS_TOO_LONG, Exception::BAD_REQUEST);
     throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);

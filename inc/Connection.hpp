@@ -25,8 +25,7 @@ class Connection : public virtual IEventHandler, public Request
 
   void  _checkBodySize() const;
 
-  // 50MB
-  static const int _defaultMaxBodySize = 50 * 1000 * 1000;
+  static const long _defaultMaxBodySize = 10 * 1024 * 1024; // 10 MB
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 10;  // 30 seconds for regular requests
@@ -52,6 +51,7 @@ class Connection : public virtual IEventHandler, public Request
 
   std::string cgiPath;
 
+  void _checkUriLen() const;
 
   std::string getContentType();
   std::vector<std::string> envStorage;
@@ -113,6 +113,8 @@ class Connection : public virtual IEventHandler, public Request
     m[404] = "404 Not Found";
     m[405] = "405 Method Not Allowed";
     m[408] = "408 Request Timeout";
+	m[413] = "413 Payload Too Large";
+	m[414] = "414 Uri Too Long";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
     m[502] = "502 Bad Gateway";

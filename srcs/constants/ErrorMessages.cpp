@@ -95,3 +95,6 @@ const char* ErrorMessages::E_FORBIDDEN =
 
 const char* ErrorMessages::E_DELETE_FAIL =
   "delete failed";
+
+const char* ErrorMessages::E_URI_TOO_LONG =
+	"Uri too long";

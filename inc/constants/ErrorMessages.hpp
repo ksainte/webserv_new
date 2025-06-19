@@ -8,6 +8,7 @@ class ErrorMessages {
 		static const char* E_SOCK_INIT;
 		static const char* E_BAD_ARG;
 		static const char* E_OPEN_FILE;
+		static const char* E_URI_TOO_LONG;
 		static const char* E_ARGV;
 		static const char* E_BAD_TYPE;
 		static const char* E_BAD_ROUTE;
