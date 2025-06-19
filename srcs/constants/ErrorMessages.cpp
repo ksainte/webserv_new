@@ -95,3 +95,6 @@ const char* ErrorMessages::E_FORBIDDEN =
 
 const char* ErrorMessages::E_DELETE_FAIL =
   "delete failed";
+
+const char* ErrorMessages::E_UNSUPPORTED_MEDIA =
+  "The media format of the requested data is not supported by the server, so the server is rejecting the request.";

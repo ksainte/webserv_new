@@ -87,6 +87,12 @@ Connection::~Connection()
   LOG_DEBUG << "Connection destroyed\n";
 }
 
+
+int Connection::getClientFd()
+{
+  return _clientFd;
+}
+
 void Connection::_checkBodySize() const
 {
   const HeaderIt it = _headers.find("content-length");
@@ -249,6 +255,7 @@ int Connection::prepareEnvForGetCGI()
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
+  setClientFd(-1);
   resetTimeout();
   return (0);
 }
@@ -426,13 +433,14 @@ void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 void Connection::getDataName()
 {
   std::size_t found;
+  HeaderIt it = _headers.find("transfer-encoding");
 
   dataName = _path;
   found = dataName.find("=");
   if (found == std::string::npos)
   {
-    if (_headers["transfer-encoding"] == "chunked")
-      throw std::runtime_error("Error Reading from Client");
+    if (it != _headers.end())
+      throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
     dataName = "";
     return ;
   }
@@ -474,7 +482,7 @@ void Connection::handleChunkedRequest()
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
     if (bytesRead == -1)
-      throw std::runtime_error("Error Reading from Client");
+      throw Exception(ErrorMessages::E_RECV, 500);
     chunkDataEnd = simulateStartChunk();
     if (!chunkDataEnd)
       break;
@@ -503,7 +511,7 @@ int Connection::simulateStartBody()
 
   if (it == _tempBuff.end())
   {
-    throw std::runtime_error("Error Reading from Client");
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
 
   size_t MetaDataBytesEnd = it - _tempBuff.begin();
@@ -535,7 +543,7 @@ std::string Connection::searchMetaData(size_t BodyDataStart)
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.begin() + BodyDataStart, filename.begin(), filename.end(), isEqual);
   if (it == itEnd)
   {
-    throw std::runtime_error("Error Reading from Client");
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
   const std::vector<unsigned char>::const_iterator itStartMarks = std::find(it, itEnd, '"');
   const std::vector<unsigned char>::const_iterator itEndMarks = std::find(itStartMarks + 1, itEnd, '"');
@@ -547,10 +555,13 @@ std::string Connection::findBoundaryInHeaders()
 {
   memset(_tempBuff.data(), 0 , _tempBuff.size());
   std::string headersBoundary;
+  HeaderIt it = _headers.find("content-type");
 
+  if (it == _headers.end())
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   size_t found = _headers["content-type"].find("=");
   if (found == std::string::npos)
-    throw std::runtime_error("Error Reading from Client");
+    throw Exception(ErrorMessages::E_UNSUPPORTED_MEDIA, 415);
   headersBoundary = _headers["content-type"].substr(found + 1);
   std::string boundary = "--";
   boundary.append(headersBoundary);
@@ -656,8 +667,7 @@ void Connection::handleMultiPartRequest()
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
     if (bytesRead == -1)
-      throw std::runtime_error("Error Reading from Client");
-    
+      throw Exception(ErrorMessages::E_RECV, 500);
     boundaryPos = searchForBoundary(boundary);
     memset(_tempBuff.data(), 0 , _tempBuff.size());
     if (boundaryPos == 0)
@@ -672,7 +682,7 @@ void Connection::handleMultiPartRequest()
     break;
   }
   if (boundaryPos == 0)
-    throw std::runtime_error("Error Reading from Client");
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   fclose (file_ptr);
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
   sendMultiPartResponse();
@@ -742,8 +752,11 @@ void Connection::prepareDeleteRequest()
   }
   else
     throw Exception(ErrorMessages::E_DELETE_FAIL, 500);
+  
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
+  setClientFd(-1);
+  resetTimeout();
 }
 
 bool Connection::isNotEmpty(const Event* p)
@@ -753,6 +766,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _redirect.c_str(), _redirect.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
+    setClientFd(-1);
     resetTimeout();
     return false;
   }
@@ -761,6 +775,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _ErrResponse.c_str(), _ErrResponse.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
+    setClientFd(-1);
     resetTimeout();
     return false;
   }
@@ -769,6 +784,7 @@ bool Connection::isNotEmpty(const Event* p)
     send(p->getFd(), _listDir.c_str(), _listDir.size(), 0);
     _manager->unregisterEvent(p->getFd());
     close(p->getFd());
+    setClientFd(-1);
     resetTimeout();
     return false;
   }
@@ -777,7 +793,7 @@ bool Connection::isNotEmpty(const Event* p)
 
 void Connection::runProperPostFunction()
 {
-  std::map<std::string, std::string>::const_iterator it = _headers.find("transfer-encoding");
+  HeaderIt it = _headers.find("transfer-encoding");
 
   if (_requestIsACGI)
     prepareEnvforPostCGI();
@@ -788,6 +804,7 @@ void Connection::runProperPostFunction()
   
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
+  setClientFd(-1);
   resetTimeout();
 }
 
@@ -980,13 +997,11 @@ int Connection::readFILE()
   MyReadFile.close();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
+  setClientFd(-1);
+  resetTimeout();
   _areHeadersSent = false;
   memset(_buffer, 0, sizeof(_buffer));
   
-  // Reset timeout when request completes successfully
-  resetTimeout();
-  
-  std::clog << "\nEnd of file!!\n";
   return 0;
 }
 
@@ -1177,6 +1192,7 @@ void Connection::_handleRequestTimeout()
   // Clean up the connection
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
+  setClientFd(-1);
   
   // Reset timeout state
   _requestStarted = false;

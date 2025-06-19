@@ -122,6 +122,7 @@ class Connection : public virtual IEventHandler, public Request
     m[404] = "404 Not Found";
     m[405] = "405 Method Not Allowed";
     m[408] = "408 Request Timeout";
+    m[415] = "415 Unsupported Media";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
     m[502] = "502 Bad Gateway";
@@ -147,6 +148,7 @@ public:
   void setEvent();
   void setSockFd(int sockFd);
   void setClientFd(int clientFd);
+  int getClientFd();
   
   // Public timeout methods
   bool isTimedOut() const;
