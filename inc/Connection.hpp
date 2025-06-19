@@ -76,12 +76,16 @@ class Connection : public virtual IEventHandler, public Request
   size_t searchForBoundary(std::string boundary);
   int simulateStartChunk();
   void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
-  std::string getDataName();
+  void getDataName();
   std::string searchMetaData(size_t BodyDataStart);
   std::string findBoundaryInHeaders();
   FILE *prepareFileAndSkipMetadata();
   void sendMultiPartResponse();
+  void sendChunkedResponse();
+  size_t getChunkSize(size_t chunkSizeEnd);
+  size_t getChunkSizeEnd();
   size_t totalReadBytes;
+  FILE *prepareFileForWriting();
   // Redirection response
   std::string _redirect;
 

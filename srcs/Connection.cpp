@@ -337,60 +337,34 @@ void Connection::discardDupEnvVar()
 
 void  Connection::transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead)
 {
-	std::cout << "CHUNK START\n";
-
-  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
-
-  if (it == _tempBuff.end())
-  {
-    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
-  }
-
-  size_t chunkSizeEnd = it - _tempBuff.begin();
-
-  std::string chunk_size_str(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
-  
-  std::stringstream ss(chunk_size_str);
-
   size_t chunkSize;
-
-  ss >> std::hex >> chunkSize;
-
-  std::clog << "cs " << chunkSize << "\n";
-
-  if (ss.fail() || chunk_size_str.empty())
-    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
-
-
-  size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
-  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
-
-  int wB;
- 
-  wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart, file_ptr);
-  totalReadBytes += wB;
-
+  size_t chunkSizeEnd;
+  size_t chunkDataStart;
+  size_t chunkDataEnd;
   size_t currentRecv;
+
+  chunkSizeEnd = getChunkSizeEnd();
+  chunkSize = getChunkSize(chunkSizeEnd);
+  chunkDataStart = chunkSizeEnd + _headerEnd.size();
+  chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
+
+  totalReadBytes += fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart, file_ptr);
 
   while (bytesRead + _tempBuff.size() < chunkDataEnd)
   {
     memset(_tempBuff.data(), 0 , _tempBuff.size());
     currentRecv = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
     bytesRead += currentRecv;
-    wB = fwrite(_tempBuff.data(), sizeof(char), currentRecv, file_ptr);
-    totalReadBytes += wB;
+    totalReadBytes += fwrite(_tempBuff.data(), sizeof(char), currentRecv, file_ptr);
   }
   memset(_tempBuff.data(), 0 , _tempBuff.size());
   currentRecv = recv(_clientFd, _tempBuff.data(), chunkDataEnd - bytesRead, 0);
-  bytesRead += currentRecv;
-  wB = fwrite(_tempBuff.data(), sizeof(char), currentRecv - _headerEnd.size() , file_ptr);
-  totalReadBytes += wB;
-
+  totalReadBytes += fwrite(_tempBuff.data(), sizeof(char), currentRecv - _headerEnd.size() , file_ptr);
 }
 
-int Connection::simulateStartChunk()
-{
 
+size_t Connection::getChunkSizeEnd()
+{
   const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
 
   if (it == _tempBuff.end())
@@ -400,6 +374,11 @@ int Connection::simulateStartChunk()
 
   size_t chunkSizeEnd = it - _tempBuff.begin();
 
+  return (chunkSizeEnd);
+}
+
+size_t Connection::getChunkSize(size_t chunkSizeEnd)
+{
   std::string chunk_size_str(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
 
   std::stringstream ss(chunk_size_str);
@@ -408,59 +387,44 @@ int Connection::simulateStartChunk()
 
   ss >> std::hex >> chunkSize;
 
-  std::clog << "sim cs is " << chunkSize << "\n";
+  if (ss.fail() || chunk_size_str.empty())
+    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
+  
+  return (chunkSize);
+}
+
+int Connection::simulateStartChunk()
+{
+  size_t chunkSize;
+  size_t chunkSizeEnd;
+  size_t chunkDataStart;
+  size_t chunkDataEnd;
+
+  chunkSizeEnd = getChunkSizeEnd();
+  chunkSize = getChunkSize(chunkSizeEnd);
 
   if (chunkSize == 0)
-    return 0;
+    return (0);
   
-  size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
-  size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
-
-  return chunkDataEnd;
+  chunkDataStart = chunkSizeEnd + _headerEnd.size();
+  chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
+  return (chunkDataEnd);
 }
 
 
 void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 {
-	std::cout << "CHUNK START\n";
+  size_t chunkSizeEnd;
+  size_t chunkDataStart;
 
-  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.end(), _headerEnd.begin(), _headerEnd.end(), isEqual);
-
-  if (it == _tempBuff.end())
-  {
-    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
-  }
-
-  size_t chunkSizeEnd = it - _tempBuff.begin();
-
-  std::string chunk_size_str(_tempBuff.begin(), _tempBuff.begin() + chunkSizeEnd);
-  
-  std::stringstream ss(chunk_size_str);
-
-  size_t chunkSize;
-
-  ss >> std::hex >> chunkSize;
-
-  std::clog << "cs " << chunkSize << "\n";
-
-  if (ss.fail() || chunk_size_str.empty())
-    throw Exception(ErrorMessages::E_HEADERS_END_NOT_FOUND, Exception::BAD_REQUEST);
-
-  size_t chunkDataStart = chunkSizeEnd + _headerEnd.size();
-  // size_t chunkDataEnd = chunkDataStart + chunkSize + _headerEnd.size();
-
-  int wB;
- 
-  wB = fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart - _headerEnd.size(), file_ptr);
-
-  totalReadBytes += wB;
-
+  chunkSizeEnd = getChunkSizeEnd();
+  chunkDataStart = chunkSizeEnd + _headerEnd.size(); 
+  totalReadBytes += fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart - _headerEnd.size(), file_ptr);
 }
 
 
-std::string Connection::getDataName()
+void Connection::getDataName()
 {
-  std::string dataName;
   std::size_t found;
 
   dataName = _path;
@@ -469,57 +433,26 @@ std::string Connection::getDataName()
   {
     if (_headers["transfer-encoding"] == "chunked")
       throw std::runtime_error("Error Reading from Client");
-    return "";
+    dataName = "";
+    return ;
   }
   dataName = dataName.substr(found + 1);
-  return (dataName);
 }
 
-void Connection::handleChunkedRequest()
+FILE *Connection::prepareFileForWriting()
 {
   FILE *file_ptr;
-	size_t bytesRead;
-  size_t chunkDataEnd;
-  std::string dataName;
 
-  _tempBuff.resize(10000);
-  dataName = getDataName();
+  getDataName();
   std::string uploadDir = "uploads/";
   uploadDir.append(dataName);
   file_ptr = fopen(uploadDir.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
+  return (file_ptr);
+}
 
-  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
-  {
-    std::clog << "\npeek bytesRead is " << bytesRead << "\n";
-    std::clog << "current totalReadBytes is " << totalReadBytes << "\n";
-
-    if (bytesRead == -1)
-      throw std::runtime_error("Error Reading from Client");
-    
-    chunkDataEnd = simulateStartChunk();
-
-    if (!chunkDataEnd)
-      break;
-
-    std::clog << "chunkDataEnd is "<<  chunkDataEnd << "\n";
-    memset(_tempBuff.data(), 0 , _tempBuff.size());
-    if (_tempBuff.capacity() < chunkDataEnd)
-    {
-      bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
-      transfer_encoding_chunked(file_ptr, bytesRead);
-      memset(_tempBuff.data(), 0 , _tempBuff.size());
-      continue;
-    }
-    bytesRead = recv(_clientFd, _tempBuff.data(), chunkDataEnd, 0);
-    readHoleChunkAtOnce(file_ptr, bytesRead);
-    memset(_tempBuff.data(), 0 , _tempBuff.size());
-  }
-  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
-  fclose (file_ptr);
-
-  absPath = uploadDir;
-  std::string cT  = getContentType();
+void Connection::sendChunkedResponse()
+{
   std::ostringstream oss;
   oss << "HTTP/1.1 201 Created\r\n"
       << "Content-Type: text/plain\r\n"
@@ -528,6 +461,38 @@ void Connection::handleChunkedRequest()
       << "Content-Length: 0\r\n"
       << "\r\n"; 
   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
+}
+
+void Connection::handleChunkedRequest()
+{
+  FILE *file_ptr;
+	size_t bytesRead;
+  size_t chunkDataEnd;
+
+  _tempBuff.resize(10000);
+  file_ptr = prepareFileForWriting();
+  while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
+  {
+    if (bytesRead == -1)
+      throw std::runtime_error("Error Reading from Client");
+    chunkDataEnd = simulateStartChunk();
+    if (!chunkDataEnd)
+      break;
+    memset(_tempBuff.data(), 0, _tempBuff.size());
+    if (_tempBuff.capacity() < chunkDataEnd)
+    {
+      bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), 0);
+      transfer_encoding_chunked(file_ptr, bytesRead);
+      memset(_tempBuff.data(), 0, _tempBuff.size());
+      continue;
+    }
+    bytesRead = recv(_clientFd, _tempBuff.data(), chunkDataEnd, 0);
+    readHoleChunkAtOnce(file_ptr, bytesRead);
+    memset(_tempBuff.data(), 0, _tempBuff.size());
+  }
+  fclose (file_ptr);
+  std::clog << "totalReadBytes is " << totalReadBytes << "\n";
+  sendChunkedResponse();
 }
 
 int Connection::simulateStartBody()
@@ -599,7 +564,7 @@ FILE *Connection::prepareFileAndSkipMetadata()
   std::string uploadDir = "uploads/";
 
   BodyDataStart = simulateStartBody();
-  dataName = getDataName();
+  getDataName();
   if (dataName == "")
     dataName = searchMetaData(BodyDataStart);
   uploadDir.append(dataName);
