@@ -681,17 +681,6 @@ void Connection::handleMultiPartRequest()
 void Connection::prepareEnvforPostCGI()
 {
   std::ostringstream oss;
-  // if (!_requestIsACGI)
-  // {
-  //   oss << "HTTP/1.1 204 No Content\r\n"
-  //       << "Date: Fri, 21 Jun 2024 14:18:33 GMT\r\n"
-  //       << "\r\n";
-  //   send(_clientFd, oss.str().c_str(), oss.str().size(), 0);
-  //   _manager->unregisterEvent(_clientFd);
-  //   close(_clientFd);
-  //   resetTimeout();
-  //   return ;
-  // }
   createMinPostEnv();
   const ConfigType::CgiParams& params = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = params.begin(); it != params.end(); ++it)
@@ -700,15 +689,7 @@ void Connection::prepareEnvforPostCGI()
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
-  if (_headers["transfer-encoding"] == "chunked")
-    handleChunkedRequest();
-  else if (_requestIsACGI)
-    sendToCGI();
-  else
-    handleMultiPartRequest();
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
-  resetTimeout();
+  sendToCGI();
 }
 
 
@@ -794,6 +775,22 @@ bool Connection::isNotEmpty(const Event* p)
   return true;
 }
 
+void Connection::runProperPostFunction()
+{
+  std::map<std::string, std::string>::const_iterator it = _headers.find("transfer-encoding");
+
+  if (_requestIsACGI)
+    prepareEnvforPostCGI();
+  else if (it != _headers.end() && it->second == "chunked")
+    handleChunkedRequest();
+  else
+    handleMultiPartRequest();
+  
+  _manager->unregisterEvent(_clientFd);
+  close(_clientFd);
+  resetTimeout();
+}
+
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
 
@@ -811,7 +808,7 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
     try
     {
       if (_method == "POST")
-        prepareEnvforPostCGI();
+        runProperPostFunction();
       else if (_method == "DELETE")
         prepareDeleteRequest();
       else
@@ -890,7 +887,7 @@ void Connection::findPathFinalExtension()
 
 void Connection::_isPathValid()
 {
-  findPathFinalExtension();
+  // findPathFinalExtension();
   location = _searcher->getLocation(_sockFd, _host, _path);
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);

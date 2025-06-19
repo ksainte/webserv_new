@@ -30,7 +30,7 @@ class Connection : public virtual IEventHandler, public Request
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 30;  // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 30;       // 5 seconds for CGI requests
+  static const int _defaultCgiTimeout = 5;       // 5 seconds for CGI requests
 
   Epoll* _manager;
   Searcher* _searcher;
@@ -83,6 +83,7 @@ class Connection : public virtual IEventHandler, public Request
   void sendMultiPartResponse();
   void sendChunkedResponse();
   size_t getChunkSize(size_t chunkSizeEnd);
+  void runProperPostFunction();
   size_t getChunkSizeEnd();
   size_t totalReadBytes;
   FILE *prepareFileForWriting();
