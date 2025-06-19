@@ -76,7 +76,8 @@ class Connection : public virtual IEventHandler, public Request
   size_t searchForBoundary(std::string boundary);
   int simulateStartChunk();
   void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
-  const std::string getDataName();
+  std::string getDataName();
+  std::string searchMetaData(size_t BodyDataStart);
   size_t totalReadBytes;
   // Redirection response
   std::string _redirect;

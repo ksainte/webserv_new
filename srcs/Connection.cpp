@@ -461,7 +461,7 @@ void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
 }
 
 
-const std::string Connection::getDataName()
+std::string Connection::getDataName()
 {
   std::string dataName;
   std::size_t found;
@@ -472,7 +472,7 @@ const std::string Connection::getDataName()
   {
     if (_headers["transfer-encoding"] == "chunked")
       throw std::runtime_error("Error Reading from Client");
-    return NULL;
+    return "";
   }
   dataName = dataName.substr(found + 1);
   return (dataName);
@@ -550,8 +550,6 @@ int Connection::simulateStartBody()
   
   size_t BodyDataStart = MetaDataBytesEnd + _headersEnd.size();
 
-  memset(_tempBuff.data(), 0 , _tempBuff.size());
-
   std::clog << "----------end sim\n";
 
   return BodyDataStart;
@@ -571,6 +569,26 @@ size_t Connection::searchForBoundary(std::string boundary)
   return boundaryPos;
 }
 
+std::string Connection::searchMetaData(size_t BodyDataStart)
+{
+  std::string filename = "filename=";
+
+  const std::vector<unsigned char>::const_iterator itEnd  =  _tempBuff.begin() + BodyDataStart;
+  const std::vector<unsigned char>::const_iterator it = std::search(_tempBuff.begin(), _tempBuff.begin() + BodyDataStart, filename.begin(), filename.end(), isEqual);
+
+  if (it == itEnd)
+  {
+    throw std::runtime_error("Error Reading from Client");
+  }
+
+  const std::vector<unsigned char>::const_iterator itStartMarks = std::find(it, itEnd, '"');
+  const std::vector<unsigned char>::const_iterator itEndMarks = std::find(itStartMarks + 1, itEnd, '"');
+  std::string name(itStartMarks + 1, itEndMarks);
+  
+  std::clog << "name is " << name << "\n";
+  return name;
+}
+
 void Connection::handleMultiPartRequest()
 {
   FILE *file_ptr;
@@ -580,12 +598,10 @@ void Connection::handleMultiPartRequest()
   size_t boundaryPos;
   size_t wB;
 
+
   //add code to handle upload from form!
   _tempBuff.resize(10000);
   dataName = getDataName();
-  std::string uploadDir = "uploads/";
-  uploadDir.append(dataName);
-  file_ptr = fopen(uploadDir.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
 
   std::string headersBoundary;
@@ -600,6 +616,16 @@ void Connection::handleMultiPartRequest()
   std::clog << "boundary is "<<  boundary << "\n";
 
   BodyDataStart = simulateStartBody();
+
+
+  if (dataName == "")
+    dataName = searchMetaData(BodyDataStart);
+
+  std::string uploadDir = "uploads/";
+  uploadDir.append(dataName);
+  file_ptr = fopen(uploadDir.c_str(), "wb");
+
+  memset(_tempBuff.data(), 0 , _tempBuff.size());
 
   std::clog << "BodyDataStart is "<<  BodyDataStart << "\n";
 
@@ -636,7 +662,7 @@ void Connection::handleMultiPartRequest()
   std::clog << "totalReadBytes is " << totalReadBytes << "\n";
   fclose (file_ptr);
 
-  absPath = uploadDir;
+  absPath = uploadDir;//si tu v
   std::string cT  = getContentType();
   std::ostringstream oss;
   oss << "HTTP/1.1 201 Created\r\n"
