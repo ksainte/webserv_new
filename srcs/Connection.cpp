@@ -502,21 +502,59 @@ void Connection::readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead)
   totalReadBytes += fwrite(_tempBuff.data() + chunkDataStart , sizeof(char), bytesRead - chunkDataStart - _headerEnd.size(), file_ptr);
 }
 
+std::string Connection::getFileType()
+{
+  HeaderIt it = _headers.find("content-type");
+
+  if (it == _headers.end())
+    return "";
+  std::string type = _headers["content-type"];
+  std::size_t found = type.find("/");
+  if (found == std::string::npos)
+    return "";
+  type = type.substr(found + 1);
+  for (int i = 0; type[i]; i++)
+    type[i] = tolower(type[i]);
+  if (type.compare("jpeg") == 0 || type.compare("jpg") == 0)
+    return "jpeg";
+  else if (type.compare("gif") == 0)
+    return "gif";
+  else if (type.compare("html") == 0 || type.compare("htm") == 0)
+    return "html";
+  else if (type.compare("mp4") == 0)
+    return "mp4";
+  else if (type.compare("mvk") == 0)
+    return "mkv";
+  else
+    return "";
+}
 
 void Connection::getDataName()
 {
   std::size_t found;
   HeaderIt it = _headers.find("transfer-encoding");
+  std::string fileType;
 
   dataName = _path;
-  found = dataName.find("=");
+  found = dataName.find("?filename=");
+  if (found == std::string::npos)
+    found = dataName.find("&filename=");
   if (found == std::string::npos)
   {
     if (it != _headers.end())
+    {
+      dataName = getCurrentDate();
+      fileType = getFileType();
+      if (fileType == "")
       throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+      dataName.append(".");
+      dataName.append(fileType);
+      return ;
+    }
     dataName = "";
     return ;
   }
+  found = dataName.find("=", found);
   dataName = dataName.substr(found + 1);
 }
 

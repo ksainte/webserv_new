@@ -101,6 +101,7 @@ class Connection : public virtual IEventHandler, public Request
   size_t getChunkSizeEnd();
   size_t totalReadBytes;
   FILE *prepareFileForWriting();
+  std::string getFileType();
   // Redirection response
   std::string _redirect;
 
