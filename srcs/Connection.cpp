@@ -593,7 +593,7 @@ void Connection::handleChunkedRequest()
 	ssize_t bytesRead;
   size_t chunkDataEnd;
 
-  _tempBuff.resize(10000);
+  _tempBuff.resize(POST_VECTOR_SIZE);
   file_ptr = prepareFileForWriting();
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
@@ -778,7 +778,7 @@ void Connection::handleMultiPartRequest()
   size_t boundaryPos;
   std::string boundary;
 
-  _tempBuff.resize(10000);
+  _tempBuff.resize(POST_VECTOR_SIZE);
   boundary = findBoundaryInHeaders();
   file_ptr = prepareFileAndSkipMetadata();
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
@@ -1095,12 +1095,11 @@ void Connection::sendResponseHeaders()
 
 int Connection::readFILE()
 {
-  // Check for timeout during file operations
   if (_isRequestTimedOut())
   {
     _handleRequestTimeout();
     return 1;
-  } // Reset timeout when connection closes
+  }
 
   if (_areHeadersSent == false)
   {

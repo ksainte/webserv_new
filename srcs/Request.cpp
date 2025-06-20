@@ -63,6 +63,8 @@ void Request::extractHeaders()
 {
   ssize_t bytesRead = 0;
 
+  memset(_buf.data(), 0 , _buf.size());
+
   bytesRead = recv(_clientFd, _buf.data(), _buf.capacity(), MSG_PEEK);
 
   if (!bytesRead) return;
@@ -85,6 +87,9 @@ void Request::extractHeaders()
   }
 
   _offset = it - _buf.begin() + _headersEnd.size();
+
+  memset(_buf.data(), 0 , _buf.size());
+
   bytesRead = recv(_clientFd, _buf.data(), _offset, 0);
 
   if (!bytesRead) return;

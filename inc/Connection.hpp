@@ -6,6 +6,8 @@
 #include "../inc/Request.hpp"
 #include "../inc/Searcher.hpp"
 #include <sys/time.h>
+#define BUFFER_SIZE 4096
+#define POST_VECTOR_SIZE 10000
 
 class Epoll;
 class ConnectionManager;
@@ -25,7 +27,7 @@ class Connection : public virtual IEventHandler, public Request
 
   void  _checkBodySize() const;
 
-  static const long _defaultMaxBodySize = 10 * 1024 * 1024; // 10 MB
+  static const long _defaultMaxBodySize = 300 * 1024 * 1024; // 10 MB
   
   // Timeout configuration (in seconds)
   static const int _defaultRequestTimeout = 600;         // 30 seconds for regular requests
@@ -80,7 +82,7 @@ class Connection : public virtual IEventHandler, public Request
   void findPathFinalExtension();
   //GET
   std::ifstream file;
-  char _buffer[4096];
+  char _buffer[BUFFER_SIZE];
   std::string dataName;
   std::vector<unsigned char> _tempBuff;
   std::string str;
@@ -137,8 +139,8 @@ class Connection : public virtual IEventHandler, public Request
     m[404] = "404 Not Found";
     m[405] = "405 Method Not Allowed";
     m[408] = "408 Request Timeout";
-	m[413] = "413 Payload Too Large";
-	m[414] = "414 Uri Too Long";
+	  m[413] = "413 Payload Too Large";
+	  m[414] = "414 Uri Too Long";
     m[415] = "415 Unsupported Media";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
