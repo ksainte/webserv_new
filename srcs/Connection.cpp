@@ -303,6 +303,7 @@ void Connection::prepareResponse(const Event* p)
     extractHeaders();
     _checkUriLen();
     storeHeaders();
+	_checkInvalidUrlCharacters();
     _isMethodAllowed();
     if (_isRedirect())
     {
@@ -382,6 +383,9 @@ void Connection::handleNonCgiPost()
     {
       body = std::string(buffer.data(), totalRead);
     }
+
+	_checkBodySizeMismatch(totalRead);
+
   }
 
   // Send a response indicating the server has read the body
@@ -958,6 +962,70 @@ void  Connection::_checkUriLen() const {
 
   if (_path.length() > MAX_URI_LENGTH) {
     throw Exception(ErrorMessages::E_URI_TOO_LONG, 414);
+  }
+}
+
+void Connection::_checkBodySizeMismatch(size_t size) const
+{
+  const HeaderIt it = _headers.find("content-length");
+  
+  if (it != _headers.end())
+  {
+    ssize_t declaredSize = bodySize(it->second);
+    if (declaredSize != -1 && static_cast<size_t>(declaredSize) != size)
+    {
+      LOG_WARNING << "Content-Length mismatch: declared " << declaredSize 
+                  << ", actual " << size << "\n";
+      throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+    }
+  }
+}
+
+  // RFC 3986 defines valid URI characters
+  // Reserved characters: :/?#[]@!$&'()*+,;=
+  // Unreserved characters: alphanumeric and -._~
+
+void Connection::_checkInvalidUrlCharacters() const
+{
+  const std::string& path = _path;
+  
+  for (size_t i = 0; i < path.length(); ++i)
+  {
+    unsigned char c = static_cast<unsigned char>(path[i]);
+    
+    if (c < 32 || c == 127)
+    {
+      LOG_WARNING << "Invalid URL character detected: control character 0x" 
+                  << std::hex << static_cast<int>(c) << " at position " << i << "\n";
+      throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+    }
+    
+    if (c == '<' || c == '>' || c == '"' || c == '|' || c == '\\' || c == '^')
+    {
+      LOG_WARNING << "Potentially problematic URL character detected: 0x" 
+                  << std::hex << static_cast<int>(c) << " at position " << i << "\n";
+      throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+    }
+  }
+  
+  for (size_t i = 0; path.length() >= 2 && i < path.length() - 2; ++i)
+  {
+    if (path[i] == '%')
+    {
+      if (i + 2 >= path.length() || 
+          !std::isxdigit(static_cast<unsigned char>(path[i + 1])) ||
+          !std::isxdigit(static_cast<unsigned char>(path[i + 2])))
+      {
+        LOG_WARNING << "Invalid percent encoding detected at position " << i << "\n";
+        throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+      }
+    }
+  }
+  
+  if (path.find("%%") != std::string::npos)
+  {
+    LOG_WARNING << "Double percent encoding detected in URL\n";
+    throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
 }
 
