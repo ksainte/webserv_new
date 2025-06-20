@@ -291,24 +291,15 @@ void Connection::sendToCGI()
 
 int Connection::prepareEnvForGetCGI()
 {
-  // Set up CGI environment variables
   envStorage.clear();
   env.clear();
   
-  // Add standard CGI environment variables
   envStorage.push_back("QUERY_STRING=" + _queryString);
   envStorage.push_back("REQUEST_METHOD=GET");
   envStorage.push_back("SCRIPT_NAME=" + _path);
   envStorage.push_back("PATH_INFO=" + _path);
   
-  // Add server information
-  envStorage.push_back("SERVER_NAME=webserv");
-  envStorage.push_back("SERVER_PORT=8080");
-  envStorage.push_back("SERVER_PROTOCOL=HTTP/1.1");
-  envStorage.push_back("SERVER_SOFTWARE=Webserv/1.0");
-  
-  // Add client information if available
-  if (!_headers.empty()) {
+    if (!_headers.empty()) {
     HeaderIt hostIt = _headers.find("host");
     if (hostIt != _headers.end()) {
       envStorage.push_back("HTTP_HOST=" + hostIt->second);
@@ -325,15 +316,12 @@ int Connection::prepareEnvForGetCGI()
     }
   }
   
-  // Add custom CGI parameters from configuration
   const ConfigType::CgiParams& p = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
   
-  // Remove duplicate environment variables
   discardDupEnvVar();
   
-  // Convert to char* array for execve
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
