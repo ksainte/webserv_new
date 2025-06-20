@@ -3,6 +3,8 @@
 !inc/**
 !srcs/
 !srcs/**
+!www
+!www/**
 !Makefile
 !README.md
 !configFile/

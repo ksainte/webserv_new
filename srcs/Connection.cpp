@@ -1266,7 +1266,7 @@ void Connection::handleError(const int errnum)
   std::string errval = _getErrorMessage(errnum);
 
   _ErrResponse =
-    "HTTP/1.1 " + statusCodeStr + " " + errval + "\r\n"
+    "HTTP/1.1 " + errval + "\r\n"
     "Content-Type: text/html; charset=UTF-8\r\n"
     "Content-Length: " + contentLengthStr + "\r\n"
     "\r\n"
