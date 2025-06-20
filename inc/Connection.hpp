@@ -44,6 +44,9 @@ class Connection : public virtual IEventHandler, public Request
   std::string _listDir;
   std::string _previousLoc;
   std::string absPath;
+  std::string _queryString;
+
+  void  _extractQueryParameters();
 
   // Default env
   std::list<std::string> _cgiEnv;

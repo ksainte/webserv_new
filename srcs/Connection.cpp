@@ -44,6 +44,7 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _listDir(),
   _previousLoc(),
   absPath(),
+  _queryString(),
   _cgiEnv(),
   cgiPath(),
   envStorage(),
@@ -102,6 +103,7 @@ Connection& Connection::operator=(const Connection& other)
   _listDir.clear();
   _previousLoc.clear();
   absPath.clear();
+  _queryString.clear();
   _cgiEnv.clear();
   cgiPath.clear();
   envStorage.clear();
@@ -182,33 +184,31 @@ bool Connection::_isPythonFile(const std::string& path)
 
 void Connection::tryCgi()
 {
-  // if (!_isPythonFile(_path))
-  // {
-  //   _requestIsACGI = false;
-  //   return;
-  // }
-
+  
   location = _searcher->getLocation(_sockFd, _host, _path);
   if (!location)
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
-  const std::string prefix(location->getPrefix());//faut gere ca!
+    
+  const std::string prefix(location->getPrefix());
   const ConfigType::DirectiveValue* p = _searcher->findLocationDirective(_sockFd, "root", _host, prefix.c_str());
-  if (!p || p[0].empty())
+  if (!p || p->empty())
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+    
   struct stat stats = {};
   cgiPath = (*p)[0];
   p = _searcher->findLocationDirective(_sockFd, "cgi_pass", _host, prefix.c_str());
-  if (!p || p[0].empty())
-    return ;
-  // cgiPath.append("/");
+  if (!p || p->empty())
+    return;
+    
   cgiPath.append((*p)[0]);
   stat(cgiPath.c_str(), &stats);
+  
   if (!access(cgiPath.c_str(), X_OK))
   {
     if (!S_ISDIR(stats.st_mode))
     {
       _requestIsACGI = true;
-      return ;
+      return;
     }
     throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
@@ -314,14 +314,53 @@ void Connection::sendToCGI()
 
 int Connection::prepareEnvForGetCGI()
 {
-  // createMinGetEnv();
+  // Set up CGI environment variables
+  envStorage.clear();
+  env.clear();
+  
+  // Add standard CGI environment variables
+  envStorage.push_back("QUERY_STRING=" + _queryString);
+  envStorage.push_back("REQUEST_METHOD=GET");
+  envStorage.push_back("SCRIPT_NAME=" + _path);
+  envStorage.push_back("PATH_INFO=" + _path);
+  
+  // Add server information
+  envStorage.push_back("SERVER_NAME=webserv");
+  envStorage.push_back("SERVER_PORT=8080");
+  envStorage.push_back("SERVER_PROTOCOL=HTTP/1.1");
+  envStorage.push_back("SERVER_SOFTWARE=Webserv/1.0");
+  
+  // Add client information if available
+  if (!_headers.empty()) {
+    HeaderIt hostIt = _headers.find("host");
+    if (hostIt != _headers.end()) {
+      envStorage.push_back("HTTP_HOST=" + hostIt->second);
+    }
+    
+    HeaderIt userAgentIt = _headers.find("user-agent");
+    if (userAgentIt != _headers.end()) {
+      envStorage.push_back("HTTP_USER_AGENT=" + userAgentIt->second);
+    }
+    
+    HeaderIt acceptIt = _headers.find("accept");
+    if (acceptIt != _headers.end()) {
+      envStorage.push_back("HTTP_ACCEPT=" + acceptIt->second);
+    }
+  }
+  
+  // Add custom CGI parameters from configuration
   const ConfigType::CgiParams& p = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
+  
+  // Remove duplicate environment variables
   discardDupEnvVar();
+  
+  // Convert to char* array for execve
   for (size_t i = 0; i < envStorage.size(); ++i)
     env.push_back(const_cast<char*>(envStorage[i].c_str()));
   env.push_back(NULL);
+  
   sendToCGI();
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
@@ -358,6 +397,7 @@ void Connection::prepareResponse(const Event* p)
     _checkUriLen();
     storeHeaders();
 	  _checkInvalidUrlCharacters();
+    _extractQueryParameters();
     _isMethodAllowed();
     if (_isRedirect())
     {
@@ -638,6 +678,17 @@ std::string Connection::findBoundaryInHeaders()
   std::string boundary = "--";
   boundary.append(headersBoundary);
   return (boundary);
+}
+
+void Connection::_extractQueryParameters()
+{
+  size_t queryPos = _path.find('?');
+  if (queryPos != std::string::npos) {
+    _queryString = _path.substr(queryPos + 1);
+    _path = _path.substr(0, queryPos);
+  } else {
+    _queryString = "";
+  }
 }
 
 FILE *Connection::prepareFileAndSkipMetadata()

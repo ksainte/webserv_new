@@ -138,9 +138,22 @@ std::string listDir(const std::string& name) {
   std::stringstream res;
   DIR* dirp = opendir(name.c_str());
 
+  std::string cleanName = name;
+  cleanName.erase(cleanName.find_last_not_of("/\\") + 1);
+
+
   ss << "<!DOCTYPE html>\n";
-  ss << "<html>\n<head>\n<title>Directory Listing</title>\n</head>\n<body>\n";
-  ss << "<h1>Contents of " << name << "</h1>\n";
+  ss << "<html>\n<head>\n";
+  ss << "<title>Directory Listing</title>\n";
+  ss << "<style>\n";
+  ss << "body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }\n";
+  ss << "h1 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }\n";
+  ss << "ul { list-style: none; padding: 0; }\n";
+  ss << "li { background: white; margin: 5px 0; padding: 12px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }\n";
+  ss << "li:hover { background-color: #f8f9fa; }\n";
+  ss << "</style>\n";
+  ss << "</head>\n<body>\n";
+  ss << "<h1>Contents of " << cleanName << "</h1>\n";
   ss << "<ul>\n";
 
   dirent* dirent;
@@ -149,7 +162,8 @@ std::string listDir(const std::string& name) {
   {
     if (std::string(dirent->d_name) == "." || std::string(dirent->d_name) == "..")
       continue;
-    ss << "<li><p>" << dirent->d_name << "</li>\n";
+    
+    ss << "<li>" << dirent->d_name << "</li>\n";
   }
 
   ss << "</ul>\n";
@@ -164,6 +178,9 @@ std::string listDir(const std::string& name) {
 
   return res.str();
 }
+
+
+
 
 bool isDir(const char* path)
 {
