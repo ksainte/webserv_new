@@ -3,8 +3,14 @@
 !inc/**
 !srcs/
 !srcs/**
-!www
-!www/**
+!www/assets
+!www/assets/**
+!www/error-pages
+!www/error-pages/**
+!www/script
+!www/script/**
+!www/static
+!www/static/**
 !Makefile
 !README.md
 !configFile/
