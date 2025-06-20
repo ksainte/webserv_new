@@ -27,7 +27,6 @@ Connection::Connection():
   _requestStartTime(),
   _requestStarted(false)
 {
-  // Clear the buffer//
   memset(_buffer, 0, sizeof(_buffer));
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   LOG_DEBUG << "Connection created\n";
@@ -216,15 +215,6 @@ void Connection::tryCgi()
   throw Exception(ErrorMessages::E_FORBIDDEN, 403);
 }
 
-// if (access(cgiPath.c_str(), X_OK) == -1)
-// throw Exception(ErrorMessages::E_FORBIDDEN, 403);
-// if (S_ISDIR(stats.st_mode))
-// throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
-
-// std::size_t found = (*p)[0].find(".");
-// std::string str = (*p)[0].substr(found + 1);
-// if (str.compare(_tmpPathExt) == 0)
-// _requestIsACGI = true;
 
 std::string Connection::getContentType()
 {
@@ -299,25 +289,8 @@ void Connection::sendToCGI()
   throw Exception(ErrorMessages::E_TIMEOUT, 408);
 }
 
-// void Connection::createMinGetEnv()
-// {
-//   envStorage.clear();
-//   env.clear();
-//   std::ostringstream s;
-//   file.open(absPath.c_str(), std::ios::binary | std::ios::ate);
-//   long lenght = file.tellg();
-//   file.close();
-//   s << lenght;
-//   std::string contentLength(s.str());
-//   std::string contentType = getContentType();
-//   envStorage.push_back(std::string("CONTENT_LENGTH") + "=" + contentLength);
-//   envStorage.push_back(std::string("CONTENT_TYPE") + "=" + contentType);
-//   envStorage.push_back("QUERY_STRING=" + absPath);
-// }
-
 int Connection::prepareEnvForGetCGI()
 {
-  // createMinGetEnv();
   const ConfigType::CgiParams& p = location->getCgiParams();
   for (ConfigType::CgiParams::const_iterator it = p.begin(); it != p.end(); ++it)
     envStorage.push_back(it->first + "=" + it->second);
@@ -338,7 +311,6 @@ void Connection::_isMethodAllowed() const
   const ConfigType::DirectiveValue* methods =
     _searcher->findLocationDirective(_sockFd, "method", _host, _path);
 
-  // By default, all methods are allowed
   if (!methods) return;
 
   ConfigType::DirectiveValueIt it = methods->begin();
@@ -1020,7 +992,6 @@ void Connection::findPathFinalExtension()
 void Connection::_isPathValid()
 {
 
-  // findPathFinalExtension();
   location = _searcher->getLocation(_sockFd, _host, _path);
 
   if (!location)
@@ -1036,25 +1007,17 @@ void Connection::_isPathValid()
   if (!root || root->empty())
     throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
-  // absPath is the vector first item
   absPath = (*root)[0];
 
-  // if absPath is not already not valid
-  // we send a 404 not found error
   if (access(absPath.c_str(), R_OK))
     throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
-  // If absPath is a valid path in the filesystem
-  // we send the file
   if (!isDir(absPath.c_str())) return;
 
   absPath.append("/");
 
-  // If not we append the uri to absPath
   absPath.append(_path.substr(strlen(prefix.c_str())));
 
-  // If absPath + uri is a valid file
-  // we send it
   if (prefix != _path
     && !access(absPath.c_str(), F_OK)
     && !isDir(absPath.c_str()))
@@ -1069,8 +1032,6 @@ void Connection::_isPathValid()
     return;
   }
 
-  // We check default file access
-  // until one is valid, or we reach vector end
   if (_checkDefaultFileAccess(prefix)) return;
 
   throw Exception(ErrorMessages::E_BAD_PATH, 404);
@@ -1256,7 +1217,6 @@ int Connection::getSockFd() const { return _sockFd; }
 Epoll* Connection::getManager() const { return _manager; }
 Searcher* Connection::getSearcher() const { return _searcher; }
 
-// Timeout implementation methods
 void Connection::_startRequestTimer()
 {
   if (!_requestStarted)
@@ -1300,21 +1260,17 @@ void Connection::_handleRequestTimeout()
 {
   LOG_WARNING << "Request timeout after " << _getElapsedTime() << " seconds for fd " << _clientFd << "\n";
   
-  // Send 408 Request Timeout response
   handleError(408);
   
-  // If there's an error response, send it
   if (!_ErrResponse.empty())
   {
     send(_clientFd, _ErrResponse.c_str(), _ErrResponse.size(), 0);
   }
   
-  // Clean up the connection
   _manager->unregisterEvent(_clientFd);
   close(_clientFd);
   setClientFd(-1);
   
-  // Reset timeout state
   _requestStarted = false;
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
 }
