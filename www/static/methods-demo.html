@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Methods Demo - Webserv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            padding: 32px 32px 24px 32px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 2.2em;
+            font-weight: 400;
+            color: #222;
+        }
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        .method-section {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #ececec;
+        }
+        .method-section:last-child {
+            border-bottom: none;
+        }
+        .method-title {
+            font-size: 1.3em;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .method-description {
+            color: #555;
+            margin-bottom: 18px;
+            font-size: 1em;
+        }
+        .demo-form {
+            background: #fafbfc;
+            padding: 18px 18px 12px 18px;
+            border-radius: 7px;
+            margin-bottom: 18px;
+            border: 1px solid #ececec;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #222;
+        }
+        input[type="text"], input[type="file"], textarea {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+            margin-bottom: 2px;
+        }
+        textarea {
+            resize: vertical;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 22px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 8px;
+            margin-top: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .delete-btn {
+            background: #e74c3c;
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        .response-area {
+            background: #f4f4f4;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.97em;
+            white-space: pre-wrap;
+            height: 220px;              
+            max-height: 220px;          
+            width: 100%;
+            min-width: 100%;
+            max-width: 100%;
+            overflow-y: auto;           
+            overflow-x: auto;
+            display: block;             
+            transition: background-color 0.3s ease;
+            color: #333;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+        .response-success {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        .response-error {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 800px) {
+            .container { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTTP Methods Demo</h1>
+            <p>Test GET, POST, and DELETE methods supported by the webserver.</p>
+        </div>
+        <a href="/" class="back-link">← Back to Main Demo</a>
+        
+        <div class="method-section">
+            <div class="method-title">GET Method</div>
+            <div class="method-description">
+                Retrieve data from the server. GET requests are used to fetch resources like HTML pages, images, or API data.
+            </div>
+            <div class="demo-form">
+                <div class="form-group">
+                    <label for="get-url">URL to fetch:</label>
+                    <input type="text" id="get-url" value="/path/to/file" placeholder="Enter URL path">
+                </div>
+                <button onclick="testGet()">Send GET Request</button>
+                <button onclick="testGetExample('index.html')">Demo Page</button>
+                <button onclick="testGetExample('/nonexistent')">404 Example</button>
+                <button onclick="openLastResponse()" id="open-response-btn" style="display: none;">Open Response in New Tab</button>
+                <div id="get-response" class="response-area">&nbsp;</div>
+            </div>
+        </div>
+
+        <div class="method-section">
+            <div class="method-title">POST Method</div>
+            <div class="demo-form">
+                <div class="form-group">
+                    <label for="upload-file">Select File:</label>
+                    <input type="file" id="upload-file">
+                </div>
+                <button onclick="testFileUpload()">Upload File</button>
+                <div id="upload-response" class="response-area">&nbsp;</div>
+            </div>
+        </div>
+
+        <div class="method-section">
+            <div class="method-title">DELETE Method</div>
+            <div class="method-description">
+                Remove resources from the server. DELETE requests are used to delete files, records, or other resources.
+            </div>
+            <div class="demo-form">
+				<div class="form-group">
+					<label for="delete-url">Resource to delete:</label>
+					<input type="text" id="delete-url" value="" placeholder="Enter resource path to delete">
+				</div>
+				<button class="delete-btn" onclick="testDelete()">Send DELETE Request</button>
+				<div id="delete-response" class="response-area">&nbsp;</div>
+			</div>
+        </div>
+    </div>
+    <script>
+       // Global variables to store the last GET response
+	   let lastGetResponse = null;
+        let lastGetUrl = null;
+        let lastGetContentType = null;
+		let lastGetIsBinary = false;
+
+        function testGet() {
+            const url = document.getElementById('get-url').value;
+            const responseArea = document.getElementById('get-response');
+            const openButton = document.getElementById('open-response-btn');
+            
+            if (!url.trim()) {
+                alert('Please enter a URL to test');
+                return;
+            }
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = 'Loading...';
+            responseArea.className = 'response-area'; // Reset to default
+            openButton.style.display = 'none'; // Hide button while loading
+            
+            fetch(url)
+                .then(response => {
+                    const status = response.status;
+                    const statusText = response.statusText;
+                    const contentType = response.headers.get('content-type') || 'text/plain';
+                    
+                    // Check if it's a binary file
+                    const isBinary = /\.(pdf|jpg|jpeg|png|gif|svg|webp|bmp|ico|mp4|webm|ogg|avi|mov|mkv|flv|wmv)$/i.test(url);
+                    
+                    if (isBinary) {
+                        return response.arrayBuffer().then(buffer => ({
+                            status,
+                            statusText,
+                            contentType,
+                            body: buffer,
+                            fullLength: buffer.byteLength,
+                            isBinary: true
+                        }));
+                    } else {
+                        return response.text().then(text => ({
+                            status,
+                            statusText,
+                            contentType,
+                            body: text,
+                            fullLength: text.length,
+                            isBinary: false
+                        }));
+                    }
+                })
+                .then(data => {
+                    // Store the full response for the new tab
+                    lastGetResponse = data.body;
+                    lastGetUrl = url;
+                    lastGetContentType = data.contentType;
+                    lastGetIsBinary = data.isBinary;
+                    
+                    // Show truncated version in the response area
+                    let displayText;
+                    if (data.isBinary) {
+                        displayText = `[Binary data - ${data.fullLength} bytes]`;
+                    } else {
+                        displayText = data.body.substring(0, 500) + (data.body.length > 500 ? '...' : '');
+                    }
+                    
+                    responseArea.innerHTML = `HTTP/1.1 ${data.status} ${data.statusText}
+Content-Type: ${data.contentType}
+Content-Length: ${data.fullLength}
+
+${displayText}`;
+                    
+                    // Set background color based on status
+                    if (data.status >= 200 && data.status < 300) {
+                        responseArea.className = 'response-area response-success';
+                    } else {
+                        responseArea.className = 'response-area response-error';
+                    }
+                    
+                    // Show the "Open Response" button for any response (including 404)
+                    openButton.style.display = 'inline-block';
+                })
+                .catch(error => {
+                    responseArea.innerHTML = `Error: ${error.message}`;
+                    responseArea.className = 'response-area response-error';
+                    openButton.style.display = 'none';
+                });
+        }
+
+        function openLastResponse() {
+            if (lastGetResponse) {
+                const isImage = /\.(jpg|jpeg|png|gif|svg|webp|bmp|ico)$/i.test(lastGetUrl);
+                const isVideo = /\.(mp4|webm|ogg|avi|mov|mkv|flv|wmv)$/i.test(lastGetUrl);
+                const isPdf = /\.pdf$/i.test(lastGetUrl);
+                
+                console.log('Debug - lastGetUrl:', lastGetUrl);
+                console.log('Debug - isPdf:', isPdf);
+                console.log('Debug - lastGetResponse type:', typeof lastGetResponse);
+                console.log('Debug - lastGetResponse length:', lastGetResponse ? lastGetResponse.length : 'null');
+                
+                if (isImage) {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(`
+                        <html>
+                        <head><title>Image Response</title></head>
+                        <body>
+                            <img src="${lastGetUrl}" alt="Response Image" style="max-width: 100%; height: auto;">
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                } else if (isVideo) {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>Video Response</title>
+                            <style>
+                                body {
+                                    margin: 0;
+                                    padding: 20px;
+                                    background: #000;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    min-height: 100vh;
+                                    font-family: Arial, sans-serif;
+                                }
+                                .video-container {
+                                    max-width: 90vw;
+                                    max-height: 90vh;
+                                }
+                                video {
+                                    width: 100%;
+                                    height: auto;
+                                    max-height: 90vh;
+                                    border-radius: 8px;
+                                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                                }
+                                .video-info {
+                                    color: white;
+                                    text-align: center;
+                                    margin-top: 10px;
+                                    font-size: 14px;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="video-container">
+                                <video controls autoplay>
+                                    <source src="${lastGetUrl}" type="video/${getVideoType(lastGetUrl)}">
+                                    Your browser does not support the video tag.
+                                </video>
+                                <div class="video-info">
+                                    Video: ${lastGetUrl.split('/').pop()}
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                } else if (isPdf) {
+                    console.log('Debug - Entering PDF block');
+                    console.log('Debug - Creating blob from:', lastGetResponse);
+                    
+                    const blob = new Blob([lastGetResponse], { type: 'application/pdf' });
+                    console.log('Debug - Blob created:', blob);
+                    console.log('Debug - Blob size:', blob.size);
+                    
+                    const url = URL.createObjectURL(blob);
+                    console.log('Debug - Blob URL created:', url);
+                    
+                    const newWindow = window.open(url, '_blank');
+                    console.log('Debug - Window opened:', newWindow);
+                } else {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(lastGetResponse);
+                    newWindow.document.close();
+                }
+            }
+        }
+        // Helper function to determine video MIME type
+        function getVideoType(url) {
+            const extension = url.split('.').pop().toLowerCase();
+            const videoTypes = {
+                'mp4': 'mp4',
+                'webm': 'webm',
+                'ogg': 'ogg',
+                'avi': 'x-msvideo',
+                'mov': 'quicktime',
+                'mkv': 'x-matroska',
+                'flv': 'x-flv',
+                'wmv': 'x-ms-wmv'
+            };
+            return videoTypes[extension] || 'mp4';
+        }
+
+        function testGetExample(url) {
+            document.getElementById('get-url').value = url;
+            testGet();
+        }
+
+        function testPost() {
+            const url = document.getElementById('post-url').value;
+            const data = document.getElementById('post-data').value;
+            const responseArea = document.getElementById('post-response');
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = 'Loading...';
+            responseArea.className = 'response-area'; // Reset to default
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: data
+            })
+            .then(response => {
+                const status = response.status;
+                const statusText = response.statusText;
+                return response.text().then(text => ({
+                    status,
+                    statusText,
+                    body: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+                    fullLength: text.length
+                }));
+            })
+            .then(data => {
+                responseArea.innerHTML = `HTTP/1.1 ${data.status} ${data.statusText}
+Content-Type: text/plain
+Content-Length: ${data.fullLength}
+
+${data.body}`;
+                
+                // Set background color based on status
+                if (data.status >= 200 && data.status < 300) {
+                    responseArea.className = 'response-area response-success';
+                } else {
+                    responseArea.className = 'response-area response-error';
+                }
+            })
+            .catch(error => {
+                responseArea.innerHTML = `Error: ${error.message}`;
+                responseArea.className = 'response-area response-error';
+            });
+        }
+        function testFileUpload() {
+            const fileInput = document.getElementById('upload-file');
+            const responseArea = document.getElementById('upload-response');
+            if (!fileInput.files[0]) {
+                alert('Please select a file first');
+                return;
+            }
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = 'Uploading...';
+            responseArea.className = 'response-area'; // Reset to default
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                const status = response.status;
+                const statusText = response.statusText;
+                return response.text().then(text => ({
+                    status,
+                    statusText,
+                    body: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+                    fullLength: text.length
+                }));
+            })
+            .then(data => {
+                responseArea.innerHTML = `HTTP/1.1 ${data.status} ${data.statusText}
+Content-Type: text/plain
+Content-Length: ${data.fullLength}
+
+${data.body}`;
+                
+                // Set background color based on status
+                if (data.status >= 200 && data.status < 300) {
+                    responseArea.className = 'response-area response-success';
+                } else {
+                    responseArea.className = 'response-area response-error';
+                }
+            })
+            .catch(error => {
+                responseArea.innerHTML = `Error: ${error.message}`;
+                responseArea.className = 'response-area response-error';
+            });
+        }
+        function testDelete() {
+            const url = document.getElementById('delete-url').value;
+            const responseArea = document.getElementById('delete-response');
+            if (!url.trim()) {
+                alert('Please enter a resource path to delete');
+                return;
+            }
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = 'Loading...';
+            responseArea.className = 'response-area'; // Reset to default
+            
+            fetch(url, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                const status = response.status;
+                const statusText = response.statusText;
+                return response.text().then(text => ({
+                    status,
+                    statusText,
+                    body: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+                    fullLength: text.length
+                }));
+            })
+            .then(data => {
+                responseArea.innerHTML = `HTTP/1.1 ${data.status} ${data.statusText}
+Content-Type: text/html
+Content-Length: ${data.fullLength}
+
+${data.body}`;
+                
+                // Set background color based on status
+                if (data.status >= 200 && data.status < 300) {
+                    responseArea.className = 'response-area response-success';
+                } else {
+                    responseArea.className = 'response-area response-error';
+                }
+            })
+            .catch(error => {
+                responseArea.innerHTML = `Error: ${error.message}`;
+                responseArea.className = 'response-area response-error';
+            });
+        }
+        
+    </script>
+</body>
+</html>

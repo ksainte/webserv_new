@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGI Demo - Webserv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .content {
+            padding: 40px;
+        }
+        .cgi-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 5px solid #e74c3c;
+        }
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .feature-card h4 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus, textarea:focus, select:focus {
+            border-color: #e74c3c;
+            outline: none;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        .response-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CGI Demo</h1>
+            <p>Test Common Gateway Interface execution with Python scripts and environment variables</p>
+        </div>
+        
+        <div class="content">
+            <a href="/" class="back-link">← Back to Main Demo</a>
+            
+            <div class="cgi-section">
+                <h2 class="section-title">
+                    <span>🐍</span>
+                    Python CGI Scripts
+                </h2>
+                <p>Execute Python scripts through CGI with proper environment variable handling and input/output processing.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>📊 System Information</h4>
+                        <p>Get system information and environment variables from the CGI script.</p>
+                        <button onclick="runSystemInfo()">Run System Info</button>
+                        <div id="system-info-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🔢 Calculator</h4>
+                        <p>Simple calculator that processes GET parameters through CGI.</p>
+                        <div class="form-group">
+                            <label for="calc-expression">Expression:</label>
+                            <input type="text" id="calc-expression" value="2+3*4" placeholder="Enter mathematical expression">
+                        </div>
+                        <button onclick="runCalculator()">Calculate</button>
+                        <div id="calculator-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>📝 Form Processor</h4>
+                        <p>Process form data submitted via POST method.</p>
+                        <div class="form-group">
+                            <label for="form-name">Name:</label>
+                            <input type="text" id="form-name" value="John Doe" placeholder="Enter your name">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-email">Email:</label>
+                            <input type="text" id="form-email" value="john@example.com" placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-message">Message:</label>
+                            <textarea id="form-message" rows="3" placeholder="Enter your message">Hello from CGI!</textarea>
+                        </div>
+                        <button onclick="runFormProcessor()">Process Form</button>
+                        <div id="form-response" class="response-area"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function runSystemInfo() {
+            const responseArea = document.getElementById('system-info-response');
+            const startTime = Date.now();
+            
+            responseArea.style.display = 'none';
+            
+            fetch('/system_info.py')
+            .then(response => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                if (response.ok) {
+                    return response.text().then(text => ({
+                        success: true,
+                        text: text,
+                        time: executionTime
+                    }));
+                } else {
+                    return {
+                        success: false,
+                        text: `HTTP ${response.status}: ${response.statusText}`,
+                        time: executionTime
+                    };
+                }
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `CGI System Information Script
+Execution Time: ${data.time}ms
+Status: ${data.success ? 'Success' : 'Failed'}
+
+Response:
+${data.text}`;
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Execution Time: ${executionTime}ms`;
+            });
+        }
+
+        function runCalculator() {
+            const expression = document.getElementById('calc-expression').value;
+            const responseArea = document.getElementById('calculator-response');
+            const startTime = Date.now();
+            
+            responseArea.style.display = 'none';
+            
+            fetch(`/calculator.py?expression=${encodeURIComponent(expression)}`)
+            .then(response => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                if (response.ok) {
+                    return response.text().then(text => ({
+                        success: true,
+                        text: text,
+                        time: executionTime
+                    }));
+                } else {
+                    return {
+                        success: false,
+                        text: `HTTP ${response.status}: ${response.statusText}`,
+                        time: executionTime
+                    };
+                }
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `CGI Calculator Script
+Expression: ${expression}
+Execution Time: ${data.time}ms
+Status: ${data.success ? 'Success' : 'Failed'}
+
+Response:
+${data.text}`;
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Execution Time: ${executionTime}ms`;
+            });
+        }
+
+        function runFormProcessor() {
+            const name = document.getElementById('form-name').value;
+            const email = document.getElementById('form-email').value;
+            const message = document.getElementById('form-message').value;
+            const responseArea = document.getElementById('form-response');
+            const startTime = Date.now();
+            
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('message', message);
+            
+            responseArea.style.display = 'none';
+            
+            fetch('/cgi/form_processor.py', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                if (response.ok) {
+                    return response.text().then(text => ({
+                        success: true,
+                        text: text,
+                        time: executionTime
+                    }));
+                } else {
+                    return {
+                        success: false,
+                        text: `HTTP ${response.status}: ${response.statusText}`,
+                        time: executionTime
+                    };
+                }
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `CGI Form Processor Script
+Form Data: name=${name}, email=${email}, message=${message}
+Execution Time: ${data.time}ms
+Status: ${data.success ? 'Success' : 'Failed'}
+
+Response:
+${data.text}`;
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Execution Time: ${executionTime}ms`;
+            });
+        }
+    </script>
+</body>
+</html>

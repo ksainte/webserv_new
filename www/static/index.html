@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webserv Demo - Feature Showcase</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .nav {
+            background: #ecf0f1;
+            padding: 20px;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        .nav li {
+            margin: 0;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #2c3e50;
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: white;
+            border: 2px solid #3498db;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .nav a:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        .content {
+            padding: 40px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border-left: 5px solid #3498db;
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            font-size: 1.3em;
+        }
+        .feature-card p {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        .demo-link {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+        .demo-link:hover {
+            background: #2980b9;
+        }
+        .status {
+            background: #e8f5e8;
+            border: 1px solid #27ae60;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .status h4 {
+            color: #27ae60;
+            margin-top: 0;
+        }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Webserv Demo</h1>
+            <p>Comprehensive showcase of our high-performance HTTP server capabilities</p>
+        </div>
+        
+        <div class="content">
+
+            <section id="features">
+                <h2>Core Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>HTTP Methods</h3>
+                        <a href="static/methods-demo.html" class="demo-link">Try Methods</a>
+                    </div>                    
+                    <div class="feature-card">
+                        <h3>CGI Support</h3>
+                        <a href="static/cgi-demo.html" class="demo-link">Run Scripts</a>
+                    </div>
+                                        
+                    <div class="feature-card">
+                        <h3>Directory Listing</h3>
+                        <a href="/list-dir" class="demo-link">Browse Directories</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>Redirections</h3>
+                        <a href="/redirect" class="demo-link">Test Redirects</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>Virtual Hosting</h3>
+                        <p>Multiple server blocks with different configurations, host-based routing, and port management.</p>
+                        <a href="static/virtual-hosting-demo.html" class="demo-link">Virtual Hosts</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>Request Timeouts</h3>
+                        <a href="static/timeout-demo.html" class="demo-link">Timeout Tests</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>Error Handling</h3>
+                        <p>Custom error pages for all HTTP status codes with fallback to default error responses.</p>
+                        <a href="static/error-demo.html" class="demo-link">Error Pages</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <p>Built with ❤️ using C++ | Non-blocking HTTP/1.1 Server</p>
+            <p>Supports GET, POST, DELETE methods | CGI execution | File uploads | Virtual hosting</p>
+        </div>
+    </div>
+</body>
+</html> 

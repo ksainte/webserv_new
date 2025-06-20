@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Handling Demo - Webserv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .content {
+            padding: 40px;
+        }
+        .error-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 5px solid #e74c3c;
+        }
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .error-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .error-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .error-card:hover {
+            transform: translateY(-5px);
+        }
+        .error-400 { border-left-color: #e67e22; }
+        .error-401 { border-left-color: #f39c12; }
+        .error-403 { border-left-color: #e74c3c; }
+        .error-404 { border-left-color: #9b59b6; }
+        .error-405 { border-left-color: #e67e22; }
+        .error-413 { border-left-color: #e74c3c; }
+        .error-414 { border-left-color: #e74c3c; }
+        .error-500 { border-left-color: #e74c3c; }
+        
+        .error-card h4 {
+            color: #2c3e50;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-code {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .status-400 { background: #e67e22; }
+        .status-401 { background: #f39c12; }
+        .status-403 { background: #e74c3c; }
+        .status-404 { background: #9b59b6; }
+        .status-405 { background: #e67e22; }
+        .status-413 { background: #e74c3c; }
+        .status-414 { background: #e74c3c; }
+        .status-500 { background: #e74c3c; }
+        
+        button {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        .response-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .error-description {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        .custom-error-form {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: #e74c3c;
+            outline: none;
+        }
+        .error-examples {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .stats-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Error Handling Demo</h1>
+            <p>Test the webserver's error handling capabilities and different HTTP status codes.</p>
+        </div>
+        
+        <div class="content">
+            <a href="demo.html" class="back-link">← Back to Main Demo</a>
+            
+            <!-- Error Statistics Section -->
+            <div class="stats-section">
+                <h2 class="section-title">
+                    <span>📊</span>
+                    Error Statistics
+                </h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-errors">0</div>
+                        <div class="stat-label">Total Errors</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avg-error-time">0ms</div>
+                        <div class="stat-label">Avg Response Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="fastest-error">0ms</div>
+                        <div class="stat-label">Fastest Response</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="slowest-error">0ms</div>
+                        <div class="stat-label">Slowest Response</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="error-section">
+                <h2 class="section-title">
+                    <span>🚨</span>
+                    HTTP Error Status Codes
+                </h2>
+                <p>Test different HTTP error status codes and see how the webserver handles them with custom error pages.</p>
+                
+                <div class="error-grid">
+                    <div class="error-card error-403">
+                        <h4>
+                            <span class="status-code status-403">403</span>
+                            Forbidden
+                        </h4>
+                        <div class="error-description">
+                            The server understood the request but refuses to authorize it.
+                        </div>
+                        <button onclick="testError(403)">Test 403 Error</button>
+                        <div id="error-403-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="error-card error-404">
+                        <h4>
+                            <span class="status-code status-404">404</span>
+                            Not Found
+                        </h4>
+                        <div class="error-description">
+                            The requested resource could not be found on the server.
+                        </div>
+                        <button onclick="testError(404)">Test 404 Error</button>
+                        <div id="error-404-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="error-card error-405">
+                        <h4>
+                            <span class="status-code status-405">405</span>
+                            Method Not Allowed
+                        </h4>
+                        <div class="error-description">
+                            The HTTP method used is not allowed for the requested resource.
+                        </div>
+                        <button onclick="testError(405)">Test 405 Error</button>
+                        <div id="error-405-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="error-card error-413">
+                        <h4>
+                            <span class="status-code status-413">413</span>
+                            Payload Too Large
+                        </h4>
+                        <div class="error-description">
+                            The request entity is larger than the server is willing to process.
+                        </div>
+                        <div class="form-group">
+                            <label for="payload-size">Payload Size (MB):</label>
+                            <input type="number" id="payload-size" value="100" min="1" max="1000" placeholder="Enter size in MB">
+                        </div>
+                        <button onclick="payloadTooLarge()">Test 413 Error</button>
+                        <div id="error-413-response" class="response-area"></div>
+                    </div>
+                    
+                    <div class="error-card error-414">
+                        <h4>
+                            <span class="status-code status-414">414</span>
+                            URI Too Long
+                        </h4>
+                        <div class="error-description">
+                            The URI provided was too long for the server to process.
+                        </div>
+                        <button onclick="testError(414)">Test 414 Error</button>
+                        <div id="error-414-response" class="response-area"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-section">
+                <h2 class="section-title">
+                    <span>🔧</span>
+                    Custom Error Testing
+                </h2>
+                <p>Test custom error scenarios and see how the webserver responds to different error conditions.</p>
+                
+                <div class="custom-error-form">
+                    <h3>Custom Error Test</h3>
+                    <div class="form-group">
+                        <label for="custom-url">URL to test:</label>
+                        <input type="text" id="custom-url" value="/nonexistent/path" placeholder="Enter URL that should cause an error">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-method">HTTP Method:</label>
+                        <select id="custom-method">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    <button onclick="testCustomError()">Test Custom Error</button>
+                    <div id="custom-error-response" class="response-area"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let errorCount = 0;
+        let totalErrorTime = 0;
+        let errorTimes = {};
+
+        function updateErrorStats(statusCode, responseTime) {
+            errorCount++;
+            totalErrorTime += responseTime;
+            errorTimes[statusCode] = responseTime;
+            
+            document.getElementById('total-errors').textContent = errorCount;
+            document.getElementById('avg-error-time').textContent = Math.round(totalErrorTime / errorCount) + 'ms';
+            
+            // Update fastest and slowest
+            const times = Object.values(errorTimes);
+            if (times.length > 0) {
+                const fastest = Math.min(...times);
+                const slowest = Math.max(...times);
+                document.getElementById('fastest-error').textContent = fastest + 'ms';
+                document.getElementById('slowest-error').textContent = slowest + 'ms';
+            }
+        }
+
+        function testError(statusCode) {
+            const responseArea = document.getElementById(`error-${statusCode}-response`);
+            const startTime = Date.now();
+            
+            responseArea.style.display = 'none';
+            
+            // Create URLs that will trigger specific errors
+            const errorUrls = {
+                400: '/bad-request-test',
+                401: '/unauthorized-test',
+                403: '/forbidden-test',
+                404: '/nonexistent-file-' + Date.now(),
+                405: '/method-not-allowed-test',
+                413: '/payload-too-large-test',
+                414: '/' + 'a'.repeat(10000), // Very long URL
+                500: '/internal-server-error-test'
+            };
+            
+            const url = errorUrls[statusCode];
+            const method = statusCode === 405 ? 'PUT' : 'GET';
+            
+            fetch(url, {
+                method: method
+            })
+            .then(response => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                return response.text().then(text => ({
+                    status: response.status,
+                    statusText: response.statusText,
+                    text: text,
+                    time: responseTime
+                }));
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `HTTP/1.1 ${data.status} ${data.statusText}
+Content-Type: text/html
+Response Time: ${data.time}ms
+
+Response Body:
+${data.text.substring(0, 1000)}${data.text.length > 1000 ? '...' : ''}`;
+                
+                updateErrorStats(statusCode, data.time);
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Response Time: ${responseTime}ms`;
+                
+                updateErrorStats(statusCode, responseTime);
+            });
+        }
+
+        function testCustomError() {
+            const url = document.getElementById('custom-url').value;
+            const method = document.getElementById('custom-method').value;
+            const responseArea = document.getElementById('custom-error-response');
+            const startTime = Date.now();
+            
+            responseArea.style.display = 'none';
+            
+            fetch(url, {
+                method: method
+            })
+            .then(response => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                return response.text().then(text => ({
+                    status: response.status,
+                    statusText: response.statusText,
+                    text: text,
+                    time: responseTime
+                }));
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Custom Error Test
+URL: ${url}
+Method: ${method}
+HTTP Status: ${data.status} ${data.statusText}
+Response Time: ${data.time}ms
+
+Response Body:
+${data.text.substring(0, 1000)}${data.text.length > 1000 ? '...' : ''}`;
+                
+                updateErrorStats(data.status, data.time);
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Response Time: ${responseTime}ms`;
+                
+                updateErrorStats(0, responseTime);
+            });
+        }
+
+        function payloadTooLarge() {
+            const responseArea = document.getElementById('error-413-response');
+            const sizeInput = document.getElementById('payload-size');
+            const startTime = Date.now();
+            
+            // Get the size from the input field
+            const sizeMB = parseInt(sizeInput.value) || 100;
+            const sizeBytes = sizeMB * 1024 * 1024;
+            
+            responseArea.style.display = 'none';
+            
+            // Create a payload of the specified size
+            const largePayload = 'x'.repeat(sizeBytes);
+            
+            fetch('/test-payload-size', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'Content-Length': largePayload.length.toString()
+                },
+                body: largePayload
+            })
+            .then(response => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                return response.text().then(text => ({
+                    status: response.status,
+                    statusText: response.statusText,
+                    text: text,
+                    time: responseTime
+                }));
+            })
+            .then(data => {
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Payload Too Large Test
+Payload Size: ${sizeMB}MB (${sizeBytes.toLocaleString()} bytes)
+HTTP Status: ${data.status} ${data.statusText}
+Response Time: ${data.time}ms
+
+Response Body:
+${data.text.substring(0, 1000)}${data.text.length > 1000 ? '...' : ''}`;
+                
+                updateErrorStats(data.status, data.time);
+            })
+            .catch(error => {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                responseArea.style.display = 'block';
+                responseArea.innerHTML = `Error: ${error.message}
+Payload Size: ${sizeMB}MB (${sizeBytes.toLocaleString()} bytes)
+Response Time: ${responseTime}ms`;
+                
+                updateErrorStats(413, responseTime);
+            });
+        }
+    </script>
+</body>
+</html>
