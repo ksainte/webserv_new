@@ -14,8 +14,8 @@ public:
   void checkConnectionTimeouts();
 
 private:
-  const Epoll& _eventManager;
-  const Searcher& _searcher;
+  Epoll& _eventManager;
+  Searcher& _searcher;
   static const int MAX_CONN = 200;
   static int _numCon;
   Connection connection[MAX_CONN];

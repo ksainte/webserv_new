@@ -8,7 +8,9 @@ SRCS_DIR := srcs
 CC       := c++
 CFLAGS   := -Wall \
             -Wextra \
-            -g \
+			-Werror \
+            -fsanitize=address \
+			-g \
             -std=c++98 \
             -I$(INCLUDE)
 

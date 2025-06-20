@@ -17,11 +17,12 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 			break;
 		i++;
 	}
+	
 	if (i == MAX_CONN) return -1;
-	// Connection *newCon = &connection[i];
+	
 	Connection &newCon = connection[i];
-	// Connection& newCon = connection[_numCon];
-	// std::memset(connection + i, 0, sizeof(newCon));
+	newCon = Connection(_searcher, _eventManager);
+
 	newCon.setSockFd(sockFd);
 	newCon.setClientFd(clientFd);
 	newCon.setEvent();

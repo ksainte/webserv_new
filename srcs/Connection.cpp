@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <csignal>
 #include <cstring>
@@ -36,11 +37,29 @@ Connection::Connection(Searcher& searcher, Epoll& manager):
   _manager(&manager),
   _searcher(&searcher),
   _sockFd(-1),
+  _event(),
+  _tmpPathExt(),
+  _rootPath(),
+  _ErrResponse(),
+  _listDir(),
+  _previousLoc(),
+  absPath(),
+  _cgiEnv(),
+  cgiPath(),
+  envStorage(),
+  env(),
   location(),
   _continueReadingFile(),
   _requestIsACGI(),
+  _isExtensionSet(),
   _areHeadersSent(),
+  file(),
   _buffer(),
+  dataName(),
+  _tempBuff(),
+  str(),
+  totalReadBytes(),
+  _redirect(),
   _requestStartTime(),
   _requestStarted(false)
 {
@@ -70,10 +89,38 @@ Connection& Connection::operator=(const Connection& other)
 {
   if (this == &other)
     return *this;
+
   _manager = other.getManager();
   _searcher = other.getSearcher();
   _sockFd = other.getSockFd();
-  _headers = other.getHeaders();
+  _clientFd = getClientFd();
+
+  _event = Event();
+  _tmpPathExt.clear();
+  _rootPath.clear();
+  _ErrResponse.clear();
+  _listDir.clear();
+  _previousLoc.clear();
+  absPath.clear();
+  _cgiEnv.clear();
+  cgiPath.clear();
+  envStorage.clear();
+  env.clear();
+  location = NULL;
+  _continueReadingFile = false;
+  _requestIsACGI = false;
+  _isExtensionSet = false;
+  _areHeadersSent = false;
+  file.close();
+  memset(_buffer, 0, sizeof(_buffer));
+  dataName.clear();
+  _tempBuff.clear();
+  str.clear();
+  totalReadBytes = 0;
+  _redirect.clear();
+  memset(&_requestStartTime, 0, sizeof(_requestStartTime));
+  _requestStarted = false;
+  
   return *this;
 }
 
@@ -500,14 +547,14 @@ void Connection::sendChunkedResponse()
 void Connection::handleChunkedRequest()
 {
   FILE *file_ptr;
-	size_t bytesRead;
+	ssize_t bytesRead;
   size_t chunkDataEnd;
 
   _tempBuff.resize(10000);
   file_ptr = prepareFileForWriting();
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
-    if (bytesRead == -1)
+    if (bytesRead == static_cast<ssize_t>(-1))
       throw Exception(ErrorMessages::E_RECV, 500);
     chunkDataEnd = simulateStartChunk();
     if (!chunkDataEnd)
@@ -683,7 +730,7 @@ void Connection::sendMultiPartResponse()
 void Connection::handleMultiPartRequest()
 {
   FILE *file_ptr;
-	size_t bytesRead;
+	ssize_t bytesRead;
   size_t boundaryPos;
   std::string boundary;
 
@@ -692,7 +739,7 @@ void Connection::handleMultiPartRequest()
   file_ptr = prepareFileAndSkipMetadata();
   while ((bytesRead = recv(_clientFd, _tempBuff.data(), _tempBuff.capacity(), MSG_PEEK)))
   {
-    if (bytesRead == -1)
+    if (bytesRead == static_cast<ssize_t>(-1))
       throw Exception(ErrorMessages::E_RECV, 500);
     boundaryPos = searchForBoundary(boundary);
     memset(_tempBuff.data(), 0 , _tempBuff.size());
@@ -834,23 +881,6 @@ void Connection::runProperPostFunction()
   resetTimeout();
 }
 
-void Connection::runProperPostFunction()
-{
-  HeaderIt it = _headers.find("transfer-encoding");
-
-  if (_requestIsACGI)
-    prepareEnvforPostCGI();
-  else if (it != _headers.end() && it->second == "chunked")
-    handleChunkedRequest();
-  else
-    handleMultiPartRequest();
-  
-  _manager->unregisterEvent(_clientFd);
-  close(_clientFd);
-  setClientFd(-1);
-  resetTimeout();
-}
-
 int Connection::handleEvent(const Event* p, const unsigned int flags)
 {
   if (_isRequestTimedOut())
@@ -913,7 +943,6 @@ bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 
 void Connection::findPathFinalExtension()
 {
-  std::clog << "\nPath was " << _path << "\n";
   std::size_t i;
   const std::string validExtension[] = {"cgi", "py", "php"};
   std::size_t found;
@@ -928,25 +957,23 @@ void Connection::findPathFinalExtension()
   }
   if (_tmpPathExt.length() == 0)
   {
-    std::clog << "\nNo Extension found after last dot(.)!\n";
     return ;
   }
-  // std::clog << "\ntmp is " << _tmpPathExt << "\n";
   _isExtensionSet = true;
   found = _path.find(_tmpPathExt);
   i = 0;
   while(i < validExtension->length())
   {
-    if (_tmpPathExt.compare(validExtension[i]) == 0)
+    if (_tmpPathExt == validExtension[i])
       _path.resize(found - 1);
     i++;
   }
-  std::clog << "\nPath is " << _path << "\n";
 }
 
 
 void Connection::_isPathValid()
 {
+
   // findPathFinalExtension();
   location = _searcher->getLocation(_sockFd, _host, _path);
 
@@ -957,7 +984,6 @@ void Connection::_isPathValid()
     return ;
 
   const std::string prefix(location->getPrefix());
-  // std::clog << prefix;
   const ConfigType::DirectiveValue* root =
     _searcher->findLocationDirective(_sockFd, "root", _host, prefix);
 

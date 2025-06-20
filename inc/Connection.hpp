@@ -28,8 +28,8 @@ class Connection : public virtual IEventHandler, public Request
   static const long _defaultMaxBodySize = 10 * 1024 * 1024; // 10 MB
   
   // Timeout configuration (in seconds)
-  static const int _defaultRequestTimeout = 60;         // 30 seconds for regular requests
-  static const int _defaultCgiTimeout = 60 * 10;       // 5 seconds for CGI requests
+  static const int _defaultRequestTimeout = 600;         // 30 seconds for regular requests
+  static const int _defaultCgiTimeout = 600 * 10;       // 5 seconds for CGI requests
 
   // Helper method to check if a path has a Python file extension
   static bool _isPythonFile(const std::string& path) ;
