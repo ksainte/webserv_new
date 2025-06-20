@@ -59,6 +59,7 @@ class Connection : public virtual IEventHandler, public Request
   void _checkUriLen() const;
 	void _checkInvalidUrlCharacters() const;
   void _checkBodySizeMismatch(size_t bodySize) const;
+  void _checkPostPermissions() const;
 
 
   std::string getContentType();
@@ -173,6 +174,7 @@ public:
   void setSockFd(int sockFd);
   void setClientFd(int clientFd);
   int getClientFd();
+  
   
   // Public timeout methods
   bool isTimedOut() const;

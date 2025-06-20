@@ -203,6 +203,16 @@ void Connection::tryCgi()
   cgiPath.append((*p)[0]);
   stat(cgiPath.c_str(), &stats);
   
+  if (access(cgiPath.c_str(), F_OK | R_OK | X_OK) == -1) {
+      if (access(cgiPath.c_str(), F_OK) == -1) {
+          throw Exception(ErrorMessages::E_BAD_PATH, 404);
+      } else if (access(cgiPath.c_str(), R_OK) == -1) {
+          throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+      } else {
+          throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+      }
+  }
+
   if (!access(cgiPath.c_str(), X_OK))
   {
     if (!S_ISDIR(stats.st_mode))
@@ -353,34 +363,38 @@ void Connection::_isMethodAllowed() const
 
 void Connection::prepareResponse(const Event* p)
 {
-  // Start the request timeout timer
-  _startRequestTimer();
-  try
-  {
-    extractHeaders();
-    _checkUriLen();
-    storeHeaders();
-	  _checkInvalidUrlCharacters();
-    _extractQueryParameters();
-    _isMethodAllowed();
-    if (_isRedirect())
+    _startRequestTimer();
+    try
     {
-      _setRedirect();
-      _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
-      return;
-    }
+        extractHeaders();
+        _checkUriLen();
+        storeHeaders();
+        _checkInvalidUrlCharacters();
+        _extractQueryParameters();
+        _isMethodAllowed();
+        
+        if (_isRedirect()) {
+            _setRedirect();
+            _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
+            return;
+        }
 
-    if (/*!_isPythonFile(_path) &&*/ _method == "GET")
-      _isPathValid();
-    _checkBodySize();
-    tryCgi();
-  } 
-  catch (Exception& e)
-  {
-    LOG_WARNING << e.what();
-    handleError(e.errnum());
-  }
-  _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
+        if (_method == "GET")
+            _isPathValid();
+        
+        if (_method == "POST") {
+            _isPathValid();
+            _checkPostPermissions();
+        }
+        
+        _checkBodySize();
+        tryCgi();
+    } 
+    catch (Exception& e) {
+        LOG_WARNING << e.what();
+        handleError(e.errnum());
+    }
+    _manager->modifyEvent(EPOLLOUT, const_cast<Event*>(p));
 }
 
 void Connection::createMinPostEnv()
@@ -987,26 +1001,35 @@ int Connection::handleEvent(const Event* p, const unsigned int flags)
 
 bool Connection::_checkDefaultFileAccess(const std::string& prefix)
 {
-  const ConfigType::DirectiveValue* index =
-    _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
+    const ConfigType::DirectiveValue* index =
+        _searcher->findLocationDirective(_sockFd, "index", _host, prefix.c_str());
 
-  if (!index) return false;
+    if (!index) return false;
 
-  for (ConfigType::DirectiveValueIt it = index->begin(); it != index->end(); ++it)
-  {
-    std::string tmp(absPath);
-    tmp.append("/");
-    tmp.append(*it);
-
-    if (!access(tmp.c_str(), R_OK)
-      && !isDir(tmp.c_str()))
+    for (ConfigType::DirectiveValueIt it = index->begin(); it != index->end(); ++it)
     {
-      absPath = tmp;
-      return true;
-    }
-  }
+        std::string tmp(absPath);
+        tmp.append("/");
+        tmp.append(*it);
 
-  return false;
+        // Check if file exists and is readable
+        if (access(tmp.c_str(), F_OK | R_OK) == -1) {
+            if (access(tmp.c_str(), F_OK) == -1) {
+                // File doesn't exist, continue to next index file
+                continue;
+            } else {
+                // File exists but not readable - permission denied
+                throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+            }
+        }
+        
+        if (!isDir(tmp.c_str())) {
+            absPath = tmp;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void Connection::findPathFinalExtension()
@@ -1038,7 +1061,6 @@ void Connection::findPathFinalExtension()
   }
 }
 
-
 void Connection::_isPathValid()
 {
 
@@ -1062,25 +1084,40 @@ void Connection::_isPathValid()
   if (access(absPath.c_str(), F_OK))
     throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
-  if (!isDir(absPath.c_str())) return;
+  if (!isDir(absPath.c_str())) 
+    return;
+  else if (access(absPath.c_str(), X_OK) == -1)
+    throw Exception(ErrorMessages::E_FORBIDDEN, 403);
 
   absPath.append("/");
 
   absPath.append(_path.substr(strlen(prefix.c_str())));
 
   if (prefix != _path) {
-    
       if (access(absPath.c_str(), F_OK) == -1) {
           throw Exception(ErrorMessages::E_BAD_PATH, 404);
       }
       
-      if (access(absPath.c_str(), R_OK) == -1) {
-          throw Exception(ErrorMessages::E_FORBIDDEN, 403);
-      }
+      if (isDir(absPath.c_str())) {
+          // For directories, check execute permission for traversal
+          if (access(absPath.c_str(), X_OK) == -1) {
+              throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+          }
 
+      } else {
+          // For files, check read permission
+          if (access(absPath.c_str(), R_OK) == -1) {
+              throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+          }
+      }
+      
       if (!isDir(absPath.c_str())) {
           return;
       }
+  }
+
+  if (_method == "POST" && isDir(absPath.c_str())) {
+      return;
   }
 
   const ConfigType::DirectiveValue* autoindex =
@@ -1320,6 +1357,30 @@ double Connection::_getElapsedTime() const
   
   return (currentTime.tv_sec - _requestStartTime.tv_sec) + 
          (currentTime.tv_usec - _requestStartTime.tv_usec) / 1000000.0;
+}
+
+void Connection::_checkPostPermissions() const
+{
+    if (_method != "POST") return;
+    
+    // Get the target directory for file uploads
+    std::string uploadDir = absPath;
+    if (!isDir(uploadDir.c_str())) {
+        // If absPath is a file, get its parent directory
+        size_t lastSlash = uploadDir.find_last_of('/');
+        if (lastSlash != std::string::npos) {
+            uploadDir = uploadDir.substr(0, lastSlash);
+        }
+    }
+    
+    // Check if directory exists and is writable
+    if (access(uploadDir.c_str(), F_OK | W_OK) == -1) {
+        if (access(uploadDir.c_str(), F_OK) == -1) {
+            throw Exception(ErrorMessages::E_BAD_PATH, 404);
+        } else {
+            throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+        }
+    }
 }
 
 void Connection::_handleRequestTimeout()
