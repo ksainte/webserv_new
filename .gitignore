@@ -4,6 +4,7 @@
 !srcs/
 !srcs/**
 !www
+!www/upload
 !www/**
 !Makefile
 !README.md

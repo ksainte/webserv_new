@@ -1059,7 +1059,7 @@ void Connection::_isPathValid()
 
   absPath = (*root)[0];
 
-  if (access(absPath.c_str(), R_OK))
+  if (access(absPath.c_str(), F_OK))
     throw Exception(ErrorMessages::E_BAD_PATH, 404);
 
   if (!isDir(absPath.c_str())) return;
@@ -1068,10 +1068,20 @@ void Connection::_isPathValid()
 
   absPath.append(_path.substr(strlen(prefix.c_str())));
 
-  if (prefix != _path
-    && !access(absPath.c_str(), F_OK)
-    && !isDir(absPath.c_str()))
-    return;
+  if (prefix != _path) {
+    
+      if (access(absPath.c_str(), F_OK) == -1) {
+          throw Exception(ErrorMessages::E_BAD_PATH, 404);
+      }
+      
+      if (access(absPath.c_str(), R_OK) == -1) {
+          throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+      }
+
+      if (!isDir(absPath.c_str())) {
+          return;
+      }
+  }
 
   const ConfigType::DirectiveValue* autoindex =
     _searcher->findLocationDirective(_sockFd, "autoindex", _host, _path);

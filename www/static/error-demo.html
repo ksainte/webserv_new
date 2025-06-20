@@ -221,7 +221,7 @@
         </div>
         
         <div class="content">
-            <a href="demo.html" class="back-link">← Back to Main Demo</a>
+            <a href="/" class="back-link">← Back to Main Demo</a>
             
             <!-- Error Statistics Section -->
             <div class="stats-section">
@@ -323,31 +323,6 @@
                 </div>
             </div>
 
-            <div class="error-section">
-                <h2 class="section-title">
-                    <span>🔧</span>
-                    Custom Error Testing
-                </h2>
-                <p>Test custom error scenarios and see how the webserver responds to different error conditions.</p>
-                
-                <div class="custom-error-form">
-                    <h3>Custom Error Test</h3>
-                    <div class="form-group">
-                        <label for="custom-url">URL to test:</label>
-                        <input type="text" id="custom-url" value="/nonexistent/path" placeholder="Enter URL that should cause an error">
-                    </div>
-                    <div class="form-group">
-                        <label for="custom-method">HTTP Method:</label>
-                        <select id="custom-method">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="DELETE">DELETE</option>
-                        </select>
-                    </div>
-                    <button onclick="testCustomError()">Test Custom Error</button>
-                    <div id="custom-error-response" class="response-area"></div>
-                </div>
-            </div>
         </div>
     </div>
 
