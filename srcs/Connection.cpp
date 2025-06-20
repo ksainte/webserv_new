@@ -90,6 +90,7 @@ Connection& Connection::operator=(const Connection& other)
   if (this == &other)
     return *this;
 
+  Request::operator=(other);
   _manager = other.getManager();
   _searcher = other.getSearcher();
   _sockFd = other.getSockFd();
@@ -120,7 +121,7 @@ Connection& Connection::operator=(const Connection& other)
   _redirect.clear();
   memset(&_requestStartTime, 0, sizeof(_requestStartTime));
   _requestStarted = false;
-  
+  LOG_DEBUG << "Connection assignment operator =\n";
   return *this;
 }
 
@@ -243,6 +244,8 @@ std::string Connection::getContentType()
     return "video/mp4";
   else if (str.compare("mvk") == 0)
     return "video/mkv";
+  else if (str.compare("pdf") == 0)
+    return "application/pdf";
   else
     return "text/plain";
 }
@@ -519,6 +522,8 @@ std::string Connection::getFileType()
     return "jpeg";
   else if (type.compare("gif") == 0)
     return "gif";
+  else if (type.compare("pdf") == 0)
+    return "pdf";
   else if (type.compare("html") == 0 || type.compare("htm") == 0)
     return "html";
   else if (type.compare("mp4") == 0)
@@ -546,7 +551,7 @@ void Connection::getDataName()
       dataName = getCurrentDate();
       fileType = getFileType();
       if (fileType == "")
-      throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
+        throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
       dataName.append(".");
       dataName.append(fileType);
       return ;
@@ -670,9 +675,10 @@ std::string Connection::findBoundaryInHeaders()
 
   if (it == _headers.end())
     throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
-  size_t found = _headers["content-type"].find("=");
+  size_t found = _headers["content-type"].find("boundary=");
   if (found == std::string::npos)
     throw Exception(ErrorMessages::E_UNSUPPORTED_MEDIA, 415);
+  found = _headers["content-type"].find("=", found);
   headersBoundary = _headers["content-type"].substr(found + 1);
   std::string boundary = "--";
   boundary.append(headersBoundary);

@@ -29,7 +29,6 @@ void Request::storeHeaders()
 
   lineStream.exceptions(std::istringstream::failbit | std::istringstream::badbit);
   lineStream >> _method >> _path >> _version;
-
   while (std::getline(iss, line) && line[0] != '\r')
   {
     size_t pos = line.find(':');
@@ -101,14 +100,14 @@ Request::Request(): _offset(0), _clientFd(-1)
 }
 
 Request::Request(const Request& other):
-  _offset(other.getOffset()),
-  _method(other.getMethod()),
-  _path(other.getPath()),
-  _version(other.getVersion()),
-  _host(other.getHost()),
+  _offset(),
+  _method(),
+  _path(),
+  _version(),
+  _host(),
   _clientFd(other.getClientFd()),
-  _buf(other.getBuf()),
-  _headers(other.getHeaders())
+  _buf(),
+  _headers()
 {
   LOG_DEBUG << "Request copied";
 }
@@ -118,15 +117,15 @@ Request& Request::operator=(const Request& other)
   if (this == &other)
     return *this;
 
-  _offset = other.getOffset();
-  _method = other.getMethod();
-  _path = other.getPath();
-  _version = other.getVersion();
-  _host = other.getHost();
-  _buf = other.getBuf();
-  _headers = other.getHeaders();
+  _buf.clear();
+  _buf.resize(_buffSize);
+  _offset = 0;
+  _method.clear();
+  _path.clear();
+  _version.clear();
+  _host.clear();
+  _headers.clear();
   _clientFd = other.getClientFd();
-
   LOG_DEBUG << "Request copy assigned";
   return *this;
 }
