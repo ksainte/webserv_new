@@ -357,7 +357,7 @@ void Connection::prepareResponse(const Event* p)
     extractHeaders();
     _checkUriLen();
     storeHeaders();
-	_checkInvalidUrlCharacters();
+	  _checkInvalidUrlCharacters();
     _isMethodAllowed();
     if (_isRedirect())
     {
@@ -525,7 +525,7 @@ FILE *Connection::prepareFileForWriting()
   FILE *file_ptr;
 
   getDataName();
-  std::string uploadDir = "uploads/";
+  std::string uploadDir = "./www/uploads/";
   uploadDir.append(dataName);
   file_ptr = fopen(uploadDir.c_str(), "wb");
   memset(_tempBuff.data(), 0 , _tempBuff.size());
@@ -537,7 +537,6 @@ void Connection::sendChunkedResponse()
   std::ostringstream oss;
   oss << "HTTP/1.1 201 Created\r\n"
       << "Content-Type: text/plain\r\n"
-      << "Location: http://127.0.0.2:8080/uploads/"
       << dataName << "\r\n"
       << "Content-Length: 0\r\n"
       << "\r\n"; 
@@ -645,7 +644,7 @@ FILE *Connection::prepareFileAndSkipMetadata()
 {
   FILE *file_ptr;
   size_t BodyDataStart;
-  std::string uploadDir = "uploads/";
+  std::string uploadDir = "www/upload/";
 
   BodyDataStart = simulateStartBody();
   getDataName();
@@ -783,23 +782,34 @@ void Connection::isFileToDeleteValid(int *result)
 
   if (!p || p[0].empty())
     throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+  
   struct stat stats = {};
   _rootPath = (*p)[0];
   _rootPath.append("/");
-  // _rootPath.append(_path);
   _rootPath.append(_path.substr(strlen(prefix.c_str())));
 
-  stat(_rootPath.c_str(), &stats);
-  if (!access(_rootPath.c_str(), W_OK))
+  // First check if file exists
+  if (stat(_rootPath.c_str(), &stats) != 0)
   {
-    if (!S_ISDIR(stats.st_mode))
-    {
-      *result = remove(_rootPath.c_str());
-      return ;
-    }
+    // File doesn't exist
+    throw Exception(ErrorMessages::E_BAD_ROUTE, 404);
+  }
+  
+  // File exists, now check if it's writable
+  if (access(_rootPath.c_str(), W_OK) != 0)
+  {
+    // File exists but not writable
+    throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+  }
+  
+  // File exists and is writable, check if it's not a directory
+  if (S_ISDIR(stats.st_mode))
+  {
     throw Exception(ErrorMessages::E_BAD_REQUEST, 400);
   }
-  throw Exception(ErrorMessages::E_FORBIDDEN, 403);
+  
+  // All checks passed, delete the file
+  *result = remove(_rootPath.c_str());
 }
 
 
@@ -1193,8 +1203,14 @@ void Connection::handleError(const int errnum)
   contentLengthStream << contentLength;
   std::string contentLengthStr = contentLengthStream.str();
 
+  std::ostringstream statusCodeStream;
+  statusCodeStream << errnum;
+  std::string statusCodeStr = statusCodeStream.str();
+
+  std::string errval = _getErrorMessage(errnum);
+
   _ErrResponse =
-    "HTTP/1.1 400 Bad Request\r\n"
+    "HTTP/1.1 " + statusCodeStr + " " + errval + "\r\n"
     "Content-Type: text/html; charset=UTF-8\r\n"
     "Content-Length: " + contentLengthStr + "\r\n"
     "\r\n"
