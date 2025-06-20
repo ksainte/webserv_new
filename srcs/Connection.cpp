@@ -786,7 +786,9 @@ void Connection::isFileToDeleteValid(int *result)
   struct stat stats = {};
   _rootPath = (*p)[0];
   _rootPath.append("/");
-  _rootPath.append(_path);
+  // _rootPath.append(_path);
+  _rootPath.append(_path.substr(strlen(prefix.c_str())));
+
   stat(_rootPath.c_str(), &stats);
   if (!access(_rootPath.c_str(), W_OK))
   {
