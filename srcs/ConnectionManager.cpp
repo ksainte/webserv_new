@@ -2,14 +2,26 @@
 #include "../inc/Epoll.hpp"
 #include "../inc/ConnectionManager.hpp"
 #include "../inc/Connection.hpp"
+#include<cstring>
 
 int ConnectionManager::_numCon = 0;
 
 int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 {
-	if (_numCon == MAX_CONN) return -1;
+	// if (_numCon == MAX_CONN) return -1;
 
-	Connection& newCon = connection[_numCon];
+	int i = 0;
+	while (i < MAX_CONN)
+	{
+		if (connection[i].getClientFd() == -1)
+			break;
+		i++;
+	}
+	if (i == MAX_CONN) return -1;
+	// Connection *newCon = &connection[i];
+	Connection &newCon = connection[i];
+	// Connection& newCon = connection[_numCon];
+	// std::memset(connection + i, 0, sizeof(newCon));
 	newCon.setSockFd(sockFd);
 	newCon.setClientFd(clientFd);
 	newCon.setEvent();
@@ -17,7 +29,7 @@ int ConnectionManager::initNewConnection(int clientFd, int sockFd)
 	uint32_t eventFlags = EPOLLIN;
 	if (_eventManager.registerEvent(eventFlags, newCon.getEvent()) == -1)
 		return -1;
-	++_numCon;
+	// ++_numCon;
 
 	return (0);
 }

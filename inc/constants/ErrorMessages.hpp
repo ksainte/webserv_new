@@ -36,5 +36,7 @@ class ErrorMessages {
 		static const char* E_BAD_REQUEST;
 		static const char* E_FORBIDDEN;
 		static const char* E_DELETE_FAIL;
+		static const char* E_UNSUPPORTED_MEDIA;
+		
 };
 #endif

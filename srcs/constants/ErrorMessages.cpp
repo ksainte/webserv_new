@@ -98,3 +98,6 @@ const char* ErrorMessages::E_DELETE_FAIL =
 
 const char* ErrorMessages::E_URI_TOO_LONG =
 	"Uri too long";
+
+const char* ErrorMessages::E_UNSUPPORTED_MEDIA =
+  "The media format of the requested data is not supported by the server, so the server is rejecting the request.";

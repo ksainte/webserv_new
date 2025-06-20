@@ -30,6 +30,7 @@ void Request::storeHeaders()
   lineStream.exceptions(std::istringstream::failbit | std::istringstream::badbit);
   lineStream >> _method >> _path >> _version;
 
+  std::clog << "Start\n";
   while (std::getline(iss, line) && line[0] != '\r')
   {
     size_t pos = line.find(':');
@@ -51,8 +52,10 @@ void Request::storeHeaders()
       key[i] = static_cast<char>(std::tolower(key[i]));
     }
     _headers[key] = value;
+    std::clog << key << ":";
+    std::clog << value << "\n";
   }
-
+  std::clog << "End\n";
   // Store host header separately since we call it often
   const HeaderIt it = _headers.find("host");
   if (it != _headers.end())

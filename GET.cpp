@@ -24,6 +24,10 @@ char *get_content_type(char *filename)
       (strcmp(file_extension, "jpg") == 0)) {
     return "image/jpeg";
   }
+  else if (strcmp(file_extension, "mp4") == 0)
+  {
+    return "video/mp4";
+  }
   else if (strcmp(file_extension, "gif") == 0) {
     return "image/gif";
   }

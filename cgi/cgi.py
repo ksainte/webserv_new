@@ -56,9 +56,8 @@ def process_multipart_form_data(environ, input_stream):
                         response_parts.append(f"Received field '{name}' with value: '{value}'")
             except ValueError:
                 continue
-
         return "\n".join(response_parts)
-
+    
     except Exception as e:
         return f"Error processing form data: {e}"
 

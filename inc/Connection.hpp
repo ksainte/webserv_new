@@ -60,6 +60,7 @@ class Connection : public virtual IEventHandler, public Request
   std::vector<std::string> envStorage;
   std::vector<char*> env;
   void discardDupEnvVar();
+  void handleChunkedRequest();
   int prepareEnvForGetCGI();
   void prepareResponse(const Event* p);
   void prepareEnvforPostCGI();
@@ -80,7 +81,26 @@ class Connection : public virtual IEventHandler, public Request
   //GET
   std::ifstream file;
   char _buffer[4096];
-
+  std::string dataName;
+  std::vector<unsigned char> _tempBuff;
+  std::string str;
+  void  transfer_encoding_chunked(FILE *file_ptr, size_t bytesRead);
+  void handleMultiPartRequest();
+  int simulateStartBody();
+  size_t searchForBoundary(std::string boundary);
+  int simulateStartChunk();
+  void  readHoleChunkAtOnce(FILE *file_ptr, size_t bytesRead);
+  void getDataName();
+  std::string searchMetaData(size_t BodyDataStart);
+  std::string findBoundaryInHeaders();
+  FILE *prepareFileAndSkipMetadata();
+  void sendMultiPartResponse();
+  void sendChunkedResponse();
+  size_t getChunkSize(size_t chunkSizeEnd);
+  void runProperPostFunction();
+  size_t getChunkSizeEnd();
+  size_t totalReadBytes;
+  FILE *prepareFileForWriting();
   // Redirection response
   std::string _redirect;
 
@@ -118,6 +138,7 @@ class Connection : public virtual IEventHandler, public Request
     m[408] = "408 Request Timeout";
 	m[413] = "413 Payload Too Large";
 	m[414] = "414 Uri Too Long";
+    m[415] = "415 Unsupported Media";
     m[500] = "500 Internal Server Error";
     m[501] = "501 Not Implemented";
     m[502] = "502 Bad Gateway";
@@ -145,6 +166,7 @@ public:
   void setEvent();
   void setSockFd(int sockFd);
   void setClientFd(int clientFd);
+  int getClientFd();
   
   // Public timeout methods
   bool isTimedOut() const;
